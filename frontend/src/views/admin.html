@@ -1,0 +1,151 @@
+<!-- ── ADMIN ── -->
+<section x-show="$store.router.current === '/admin'"
+         x-data="adminView"
+         class="dashboard-section">
+  <h1 class="ios-title mb-4">Panel</h1>
+
+  <div class="grid grid-cols-2 gap-3 mb-5">
+    <div class="ios-card p-4">
+      <p class="text-xs text-ios-secondary">Clientes</p>
+      <p class="text-2xl font-bold mt-1" x-text="stats?.clientes ?? '—'"></p>
+    </div>
+    <div class="ios-card p-4">
+      <p class="text-xs text-ios-secondary">Productos activos</p>
+      <p class="text-2xl font-bold mt-1" x-text="stats?.productos ?? '—'"></p>
+    </div>
+    <div class="ios-card p-4">
+      <p class="text-xs text-ios-secondary">Transacciones</p>
+      <p class="text-2xl font-bold mt-1" x-text="stats?.transacciones ?? '—'"></p>
+    </div>
+    <div class="ios-card p-4">
+      <p class="text-xs text-ios-secondary">Puntos emitidos</p>
+      <p class="text-2xl font-bold mt-1" x-text="stats?.puntos_emitidos ?? '—'"></p>
+    </div>
+  </div>
+
+  <div class="ios-segmented mb-4 text-xs">
+    <button :class="tab === 'usuarios' && 'active'" @click="tab = 'usuarios'">Usuarios</button>
+    <button :class="tab === 'productos' && 'active'" @click="tab = 'productos'">Productos</button>
+    <button :class="tab === 'transacciones' && 'active'" @click="tab = 'transacciones'">Movim.</button>
+    <button :class="tab === 'crear' && 'active'" @click="tab = 'crear'">Nuevo</button>
+  </div>
+
+  <!-- Tab Usuarios -->
+  <div x-show="tab === 'usuarios'" class="ios-card ios-list">
+    <template x-for="u in usuarios" :key="u.id">
+      <div class="ios-row">
+        <div class="min-w-0">
+          <p class="text-base font-medium truncate" x-text="u.nombre"></p>
+          <p class="text-xs text-ios-secondary truncate">
+            <span class="capitalize" x-text="u.rol"></span>
+            <template x-if="u.dni"><span> · DNI <span x-text="u.dni"></span></span></template>
+            · <span x-text="u.email"></span>
+          </p>
+        </div>
+        <span class="text-sm font-semibold shrink-0" x-text="u.puntos + ' pts'"></span>
+      </div>
+    </template>
+  </div>
+
+  <!-- Tab Productos -->
+  <div x-show="tab === 'productos'" class="space-y-3">
+    <div class="ios-card p-4 space-y-2">
+      <p class="text-sm font-semibold mb-1">Nuevo producto</p>
+      <input class="ios-input" placeholder="Nombre" x-model="nuevoProducto.nombre" />
+      <div class="flex gap-2">
+        <input type="number" min="0" step="0.01" class="ios-input" placeholder="Precio" x-model.number="nuevoProducto.precio" />
+        <input type="number" min="0" step="1" class="ios-input" placeholder="Pts/unidad" x-model.number="nuevoProducto.puntos_por_unidad" />
+      </div>
+      <p class="text-ios-red text-sm" x-show="errMsg" x-text="errMsg"></p>
+      <p class="text-ios-green text-sm font-medium" x-show="okMsg" x-text="okMsg"></p>
+      <button type="button" class="ios-btn-primary" :disabled="busy" @click="crearProducto">Crear producto</button>
+    </div>
+    <div class="ios-card ios-list">
+      <template x-for="p in productos" :key="p.id">
+        <div class="px-4 py-3">
+          <template x-if="editId !== p.id">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-base font-medium truncate"
+                   :class="!p.activo && 'text-ios-tertiary line-through'"
+                   x-text="p.nombre"></p>
+                <p class="text-xs text-ios-secondary">
+                  $<span x-text="formatMoney(p.precio)"></span>
+                  · <span x-text="p.puntos_por_unidad"></span> pts c/u
+                </p>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button type="button" class="text-ios-blue text-sm font-medium" @click="startEdit(p)">Editar</button>
+                <button type="button" class="text-sm font-medium"
+                        :class="p.activo ? 'text-ios-red' : 'text-ios-green'"
+                        @click="toggleActivo(p)">
+                  <span x-text="p.activo ? 'Desactivar' : 'Activar'"></span>
+                </button>
+              </div>
+            </div>
+          </template>
+          <template x-if="editId === p.id">
+            <div class="space-y-2">
+              <input class="ios-input" x-model="editDraft.nombre" />
+              <div class="flex gap-2">
+                <input type="number" min="0" step="0.01" class="ios-input" x-model.number="editDraft.precio" />
+                <input type="number" min="0" step="1" class="ios-input" x-model.number="editDraft.puntos_por_unidad" />
+              </div>
+              <div class="flex gap-2">
+                <button type="button" class="ios-btn-primary" @click="saveEdit(p)">Guardar</button>
+                <button type="button" class="ios-btn-secondary" @click="cancelEdit">Cancelar</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Tab Transacciones -->
+  <div x-show="tab === 'transacciones'" class="ios-card ios-list">
+    <template x-if="txs.length === 0">
+      <div class="ios-row text-ios-secondary text-sm"><span>Sin movimientos aún.</span></div>
+    </template>
+    <template x-for="t in txs" :key="t.id">
+      <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+          <p class="text-base font-medium truncate" x-text="t.cliente_nombre"></p>
+          <span class="text-sm font-semibold text-ios-green shrink-0">+<span x-text="t.total_puntos"></span></span>
+        </div>
+        <p class="text-xs text-ios-secondary mt-0.5">
+          $<span x-text="formatMoney(t.total_monto)"></span>
+          · <span x-text="t.vendedor_nombre"></span>
+          · <span x-text="formatDate(t.creado_en)"></span>
+        </p>
+        <template x-if="t.items && t.items.length">
+          <ul class="mt-1 text-xs text-ios-label">
+            <template x-for="(it, i) in t.items" :key="i">
+              <li><span x-text="it.cantidad"></span>× <span x-text="it.nombre"></span></li>
+            </template>
+          </ul>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <!-- Tab Crear Usuario -->
+  <form x-show="tab === 'crear'" @submit.prevent="crearUsuario" class="ios-card p-4 space-y-3">
+    <input class="ios-input" placeholder="Nombre" x-model="nuevoUsuario.nombre" required />
+    <input type="email" class="ios-input" placeholder="Email" x-model="nuevoUsuario.email" required />
+    <input type="password" class="ios-input" placeholder="Contraseña (min. 6)" x-model="nuevoUsuario.password" minlength="6" required />
+    <select class="ios-input" x-model="nuevoUsuario.rol">
+      <option value="cliente">Cliente</option>
+      <option value="vendedor">Vendedor</option>
+      <option value="admin">Admin</option>
+    </select>
+    <input x-show="nuevoUsuario.rol === 'cliente'" class="ios-input" placeholder="DNI"
+           x-model="nuevoUsuario.dni" :required="nuevoUsuario.rol === 'cliente'" />
+    <p class="text-ios-red text-sm" x-show="errMsg" x-text="errMsg"></p>
+    <p class="text-ios-green text-sm font-medium" x-show="okMsg" x-text="okMsg"></p>
+    <button type="submit" class="ios-btn-primary" :disabled="busy">
+      <span x-show="!busy">Crear usuario</span>
+      <span x-show="busy">Creando…</span>
+    </button>
+  </form>
+</section>

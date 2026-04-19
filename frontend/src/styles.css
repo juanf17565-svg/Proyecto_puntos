@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  @apply bg-ios-bg text-neutral-900 font-sans;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+[x-cloak] {
+  display: none !important;
+}
+
+@layer components {
+  .ios-card {
+    @apply bg-white rounded-2xl overflow-hidden;
+  }
+
+  .ios-list > * + * {
+    border-top: 0.5px solid rgba(60, 60, 67, 0.12);
+  }
+
+  .ios-row {
+    @apply px-4 py-3 flex items-center justify-between gap-3;
+  }
+
+  .ios-input {
+    @apply w-full bg-white rounded-xl px-4 py-3 text-base outline-none
+      border border-ios-border focus:border-ios-blue transition
+      placeholder:text-ios-tertiary;
+  }
+
+  .ios-btn {
+    @apply w-full py-3 rounded-xl font-semibold text-base transition
+      active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100;
+  }
+
+  .ios-btn-primary {
+    @apply ios-btn bg-ios-blue text-white;
+  }
+
+  .ios-btn-secondary {
+    @apply ios-btn bg-ios-gray5 text-ios-blue;
+  }
+
+  .ios-btn-danger {
+    @apply ios-btn bg-ios-red text-white;
+  }
+
+  .ios-label {
+    @apply text-xs uppercase tracking-wider text-ios-secondary px-4 pb-1;
+  }
+
+  .ios-title {
+    @apply text-[34px] leading-tight font-bold tracking-tight;
+  }
+
+  .ios-nav {
+    @apply px-4 pt-2 pb-3 flex items-center justify-between;
+  }
+
+  .ios-segmented {
+    @apply flex bg-ios-gray5 rounded-xl p-1 gap-1;
+  }
+
+  .ios-segmented button {
+    @apply flex-1 py-1.5 text-sm font-medium rounded-lg text-ios-label transition;
+  }
+
+  .ios-segmented button.active {
+    @apply bg-white text-neutral-900 shadow-sm;
+  }
+
+  .ios-chevron::after {
+    content: "";
+    @apply inline-block w-2 h-2 border-r-2 border-b-2 border-ios-tertiary rotate-[-45deg];
+  }
+}

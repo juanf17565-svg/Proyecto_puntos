@@ -1,0 +1,48 @@
+<!-- ── CLIENTE ── -->
+<section x-show="$store.router.current === '/cliente'"
+         x-data="clienteView"
+         class="dashboard-section">
+  <h1 class="ios-title mb-4">Tus puntos</h1>
+
+  <div class="ios-card p-6 text-center">
+    <p class="text-ios-secondary text-sm">Saldo actual</p>
+    <p class="text-5xl font-bold tracking-tight mt-2"
+       x-text="loading ? '—' : (me?.puntos ?? 0)"></p>
+    <p class="text-ios-secondary text-xs mt-3" x-show="me">
+      DNI <span x-text="me?.dni"></span>
+    </p>
+  </div>
+
+  <p class="ios-label mt-8">Movimientos</p>
+  <div class="ios-card ios-list">
+    <template x-if="loading">
+      <div class="ios-row text-ios-secondary text-sm"><span>Cargando…</span></div>
+    </template>
+    <template x-if="!loading && movs.length === 0">
+      <div class="ios-row text-ios-secondary text-sm"><span>Aún no tenés movimientos.</span></div>
+    </template>
+    <template x-for="m in movs" :key="m.id">
+      <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+          <p class="text-base font-medium">+<span x-text="m.total_puntos"></span> puntos</p>
+          <time class="text-xs text-ios-secondary" x-text="formatDate(m.creado_en)"></time>
+        </div>
+        <p class="text-xs text-ios-secondary mt-0.5">
+          $<span x-text="formatMoney(m.total_monto)"></span>
+          · <span x-text="m.vendedor_nombre"></span>
+        </p>
+        <template x-if="m.items && m.items.length">
+          <ul class="mt-2 text-xs text-ios-label space-y-0.5">
+            <template x-for="(it, i) in m.items" :key="i">
+              <li>
+                <span x-text="it.cantidad"></span>×
+                <span x-text="it.nombre"></span>
+                <span class="text-ios-tertiary">· +<span x-text="it.puntos_snapshot * it.cantidad"></span> pts</span>
+              </li>
+            </template>
+          </ul>
+        </template>
+      </div>
+    </template>
+  </div>
+</section>

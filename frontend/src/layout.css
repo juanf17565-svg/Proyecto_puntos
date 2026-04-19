@@ -1,0 +1,420 @@
+/* ==============================
+   LAYOUT: NAVBAR + FOOTER
+   ============================== */
+
+/* ---- NAVBAR ---- */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+  height: 64px;
+}
+
+.navbar-inner {
+  padding: 0 2rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* Logo */
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.navbar-logo img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.navbar-logo-text {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+/* Desktop navigation links */
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 1;
+}
+
+.navbar-link {
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.navbar-link:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.navbar-link.active {
+  background: #f0fdf4;
+  color: #3ab56e;
+  font-weight: 600;
+}
+
+/* Desktop auth area */
+.navbar-auth {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.navbar-points {
+  background: #f0fdf4;
+  color: #3ab56e;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid #bbf7d0;
+  white-space: nowrap;
+}
+
+.navbar-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navbar-logout {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+}
+
+.navbar-logout:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.navbar-btn-outline {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  text-decoration: none;
+  padding: 0.45rem 1rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.navbar-btn-outline:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.navbar-btn-solid {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.45rem 1rem;
+  background: #3ab56e;
+  border: 1.5px solid #3ab56e;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.navbar-btn-solid:hover {
+  background: #2ea05f;
+  border-color: #2ea05f;
+}
+
+/* Hamburger (mobile only) */
+.navbar-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.navbar-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #374151;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+/* Transparent backdrop (closes mobile menu on outside click) */
+.navbar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 38;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Mobile dropdown menu */
+.navbar-mobile {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  z-index: 39;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  padding: 0.75rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.navbar-mobile .navbar-link {
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 10px;
+}
+
+.navbar-mobile-divider {
+  height: 1px;
+  background: #f3f4f6;
+  margin: 0.5rem 0;
+}
+
+.navbar-mobile-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.navbar-mobile-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.navbar-mobile-btn {
+  display: block;
+  text-align: center;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+/* ---- MAIN CONTENT OFFSET ---- */
+.app-main {
+  padding-top: 64px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dashboard sections constraint (cliente, vendedor, admin) */
+.dashboard-section {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 1.25rem 1.25rem 3rem;
+  box-sizing: border-box;
+}
+
+/* ---- FOOTER ---- */
+.footer {
+  background: #111827;
+  color: #9ca3af;
+  padding: 2.5rem 2rem;
+  margin-top: auto;
+}
+
+/* El contenedor principal: 3 columnas en desktop, apilado en mobile */
+.footer-inner {
+  padding: 0 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Cada columna */
+.footer-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Izquierda: logo + tagline */
+.footer-col-left {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.footer-logo img {
+  height: 54px;
+  width: auto;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 10px;
+  padding: 4px 10px;
+}
+
+.footer-logo-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: -0.3px;
+}
+
+.footer-tagline {
+  font-size: 0.82rem;
+  color: #6b7280;
+  font-weight: 500;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+/* Centro: navegación */
+.footer-col-center {
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.footer-link {
+  color: #9ca3af;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.15s ease;
+  line-height: 1.6;
+}
+
+.footer-link:hover {
+  color: #3ab56e;
+}
+
+/* Derecha: redes sociales */
+.footer-col-right {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.footer-socials {
+  display: flex;
+  gap: 1rem;
+}
+
+.social-btn {
+  color: #9ca3af;
+  transition: color 0.15s ease, transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-btn:hover {
+  color: #3ab56e;
+  transform: translateY(-2px);
+}
+
+/* ==============================
+   RESPONSIVE
+   ============================== */
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  .navbar-links,
+  .navbar-auth {
+    display: none;
+  }
+
+  .navbar-hamburger {
+    display: flex;
+  }
+
+  .navbar-inner {
+    padding: 0 1rem;
+  }
+
+  /* Footer mobile: centrar todo menos el tagline */
+  .footer-col {
+    align-items: center;
+    width: 100%;
+  }
+
+  .footer-tagline {
+    align-self: flex-start;
+    text-align: left;
+  }
+}
+
+/* Tablet and up (>= 768px) */
+@media (min-width: 768px) {
+  .navbar-mobile,
+  .navbar-backdrop {
+    display: none !important;
+  }
+}
+
+/* Desktop footer: 3 columnas */
+@media (min-width: 768px) {
+  .footer-inner {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .footer-col-right {
+    align-items: flex-end;
+  }
+}
+

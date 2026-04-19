@@ -1,0 +1,113 @@
+<!-- ── CATÁLOGO (home) ── -->
+<section x-show="$store.router.current === '/'"
+         x-data="catalogView"
+         class="catalog-page">
+
+  <!-- Banner de puntos (solo si está logueado) -->
+  <div class="catalog-user-banner" x-show="$store.auth.user">
+    <div>
+      <p>Hola, <strong x-text="$store.auth.user?.nombre"></strong></p>
+      <p style="font-size:0.8rem;color:#6b7280;margin-top:0.15rem">
+        Tus puntos disponibles
+      </p>
+    </div>
+    <div style="text-align:right">
+      <p class="banner-pts" x-text="$store.auth.user?.puntos_saldo ?? 0"></p>
+      <p class="banner-pts-label">puntos</p>
+    </div>
+  </div>
+
+  <!-- Encabezado -->
+  <div class="catalog-header">
+    <h1 class="catalog-title">Catálogo de productos</h1>
+    <p class="catalog-subtitle">Canjeá tus puntos por productos exclusivos Ñandé</p>
+  </div>
+
+  <!-- Skeleton loading -->
+  <div x-show="loading" class="catalog-grid">
+    <template x-for="i in 6" :key="i">
+      <div class="product-card">
+        <div class="product-card-placeholder">
+          <div class="catalog-skeleton" style="width:52px;height:52px;border-radius:50%"></div>
+        </div>
+        <div class="product-card-body" style="gap:0.5rem;display:flex;flex-direction:column;">
+          <div class="catalog-skeleton" style="height:1rem;border-radius:6px"></div>
+          <div class="catalog-skeleton" style="height:0.75rem;border-radius:6px;width:65%"></div>
+          <div class="catalog-skeleton" style="height:3rem;border-radius:10px;margin-top:0.5rem"></div>
+          <div class="catalog-skeleton" style="height:2.5rem;border-radius:10px;margin-top:auto"></div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Grid de productos -->
+  <div x-show="!loading" class="catalog-grid">
+
+    <!-- Estado vacío -->
+    <template x-if="productos.length === 0">
+      <div class="catalog-empty">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+        </svg>
+        <h3>Sin productos disponibles</h3>
+        <p>Volvé pronto para ver las novedades</p>
+      </div>
+    </template>
+
+    <template x-for="p in productos" :key="p.id">
+      <div class="product-card">
+
+        <!-- Imagen o placeholder -->
+        <template x-if="p.imagen_url">
+          <img :src="p.imagen_url" :alt="p.nombre" class="product-card-img" />
+        </template>
+        <template x-if="!p.imagen_url">
+          <div class="product-card-placeholder">
+            <svg fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+            </svg>
+          </div>
+        </template>
+
+        <!-- Cuerpo de la card -->
+        <div class="product-card-body">
+          <p class="product-card-name" x-text="p.nombre"></p>
+          <p class="product-card-desc"
+             x-text="p.descripcion || 'Producto disponible para canje con tus puntos.'"></p>
+
+          <!-- Información de puntos -->
+          <div class="product-card-points">
+            <div class="product-card-row">
+              <span>Puntos para canjear</span>
+              <span class="cost" x-text="p.puntos_requeridos + ' pts'"></span>
+            </div>
+            <template x-if="p.puntos_acumulables">
+              <div>
+                <div class="product-card-divider"></div>
+                <div class="product-card-row" style="margin-top:0.4rem">
+                  <span>Puntos que sumás al comprar</span>
+                  <span class="earn" x-text="'+' + p.puntos_acumulables + ' pts'"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Botón CTA -->
+          <template x-if="$store.auth.user">
+            <button class="product-card-btn product-card-btn-canjear"
+                    @click="canjear(p)">
+              Canjear producto
+            </button>
+          </template>
+          <template x-if="!$store.auth.user">
+            <a href="#/login" class="product-card-btn product-card-btn-login">
+              Iniciar sesión para canjear
+            </a>
+          </template>
+        </div>
+      </div>
+    </template>
+  </div>
+</section>

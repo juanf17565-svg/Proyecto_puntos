@@ -1,0 +1,331 @@
+/* ==============================
+   LOGIN PAGE — DEDICATED STYLES
+   ============================== */
+
+.login-page {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f2f5;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
+/* Card */
+.login-card {
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.10);
+  border-left: 5px solid #3ab56e;
+  width: 100%;
+  max-width: 460px;
+  padding: 2.5rem 2rem;
+  box-sizing: border-box;
+}
+
+/* Logo */
+.login-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.login-logo img {
+  height: 90px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Heading */
+.login-heading {
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  color: #111827;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.5px;
+}
+
+.login-subheading {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0 0 2rem;
+}
+
+/* Field label */
+.login-field-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+/* Input wrapper */
+.login-input-group {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.login-input {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: #f9fafb;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.login-input:focus {
+  border-color: #3ab56e;
+  box-shadow: 0 0 0 3px rgba(58, 181, 110, 0.15);
+  background: #ffffff;
+}
+
+.login-input::placeholder {
+  color: #9ca3af;
+}
+
+.login-input-password {
+  padding-right: 3rem;
+}
+
+/* Password toggle */
+.login-input-toggle {
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.login-input-toggle:hover {
+  color: #6b7280;
+}
+
+/* Options row */
+.login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+}
+
+.login-remember input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3ab56e;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.login-forgot {
+  font-size: 0.875rem;
+  color: #3ab56e;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.login-forgot:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+/* Primary button */
+.login-btn-primary {
+  width: 100%;
+  padding: 1rem;
+  background: #111827;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s ease, transform 0.1s ease;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+}
+
+.login-btn-primary:hover:not(:disabled) {
+  background: #1f2937;
+}
+
+.login-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Divider */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+/* Google button */
+.login-btn-google {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  font-family: inherit;
+}
+
+.login-btn-google:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.login-btn-google:active {
+  transform: scale(0.98);
+}
+
+/* Error message */
+.login-error {
+  font-size: 0.85rem;
+  color: #ef4444;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+/* Footer */
+.login-footer {
+  text-align: center;
+  margin-top: 1.75rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.login-footer a {
+  color: #3ab56e;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.login-footer a:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+/* ==============================
+   RESPONSIVE
+   ============================== */
+
+/* Mobile small < 400px */
+@media (max-width: 399px) {
+  .login-card {
+    padding: 1.75rem 1.1rem;
+    border-radius: 12px;
+    border-left-width: 4px;
+  }
+
+  .login-heading {
+    font-size: 1.65rem;
+  }
+
+  .login-logo img {
+    height: 70px;
+  }
+}
+
+/* Mobile < 640px: full-bleed feel, no floating card */
+@media (max-width: 639px) {
+  .login-page {
+    align-items: flex-start;
+    padding-top: 1.5rem;
+    background-color: #ffffff;
+  }
+
+  .login-card {
+    box-shadow: none;
+    border-left-width: 4px;
+  }
+}
+
+/* Tablet >= 640px: card floats on gradient */
+@media (min-width: 640px) {
+  .login-page {
+    background: linear-gradient(135deg, #f0fdf4 0%, #f0f2f5 65%);
+  }
+}
+
+/* Desktop >= 1024px: more padding in card */
+@media (min-width: 1024px) {
+  .login-card {
+    padding: 3rem 2.5rem;
+  }
+
+  .login-heading {
+    font-size: 2.2rem;
+  }
+}
