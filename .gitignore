@@ -2,17 +2,10 @@ node_modules
 dist
 .env
 .claude
-
 frontend/node_modules
 frontend/dist
-frontend/package-lock.json
 frontend/yarn.lock
-
 backend/node_modules
 backend/dist
-backend/package-lock.json
 backend/yarn.lock
-backend/package.json
-
-frontend/package.json
 database/schema.sql
