@@ -1,5 +1,13 @@
 /* ==============================
    LAYOUT: NAVBAR + FOOTER
+   ==============================
+   PALETA DE COLORES — editá estas variables en cada regla:
+   Naranja principal:  #D4621A
+   Naranja hover:      #B85415
+   Naranja claro (bg): #FEF3E8
+   Borde naranja:      #F5C8A8
+   Marrón oscuro (footer bg): #3D1A02
+   Texto footer muted: #A08060
    ============================== */
 
 /* ---- NAVBAR ---- */
@@ -9,9 +17,9 @@
   left: 0;
   right: 0;
   z-index: 40;
-  background: #ffffff;
-  border-bottom: 1px solid #f3f4f6;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+  background: #D4621A;           /* ← color de fondo del navbar */
+  border-bottom: 1px solid #B85415; /* ← borde inferior del navbar */
+  box-shadow: 0 2px 12px rgba(180, 70, 10, 0.25); /* ← sombra del navbar */
   height: 64px;
 }
 
@@ -40,7 +48,7 @@
 .navbar-logo-text {
   font-size: 1.2rem;
   font-weight: 800;
-  color: #111827;
+  color: #ffffff;               /* ← color del texto "Ñandé" si no carga el logo */
   letter-spacing: -0.5px;
 }
 
@@ -57,20 +65,20 @@
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #374151;
+  color: rgba(255, 255, 255, 0.85); /* ← color de los links del navbar */
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
 .navbar-link:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: rgba(255, 255, 255, 0.15); /* ← fondo hover de los links del navbar */
+  color: #ffffff;                          /* ← color hover de los links del navbar */
 }
 
 .navbar-link.active {
-  background: #f0fdf4;
-  color: #3ab56e;
+  background: rgba(255, 255, 255, 0.22); /* ← fondo del link activo (página actual) */
+  color: #ffffff;                         /* ← color del link activo */
   font-weight: 600;
 }
 
@@ -90,20 +98,20 @@
 }
 
 .navbar-points {
-  background: #f0fdf4;
-  color: #3ab56e;
+  background: rgba(255, 255, 255, 0.2); /* ← fondo de la pastilla de puntos en navbar */
+  color: #ffffff;                         /* ← color del texto de puntos en navbar */
   font-weight: 700;
   font-size: 0.82rem;
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  border: 1.5px solid #bbf7d0;
+  border: 1.5px solid rgba(255, 255, 255, 0.35); /* ← borde de la pastilla de puntos */
   white-space: nowrap;
 }
 
 .navbar-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
+  color: rgba(255, 255, 255, 0.9); /* ← color del nombre de usuario en navbar */
   max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -113,7 +121,7 @@
 .navbar-logout {
   font-size: 0.82rem;
   font-weight: 500;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.8);  /* ← color del botón "Salir" en navbar */
   background: none;
   border: none;
   cursor: pointer;
@@ -124,43 +132,43 @@
 }
 
 .navbar-logout:hover {
-  background: #fee2e2;
-  color: #ef4444;
+  background: rgba(255, 255, 255, 0.15); /* ← fondo hover del botón "Salir" */
+  color: #ffffff;                          /* ← color hover del botón "Salir" */
 }
 
 .navbar-btn-outline {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
+  color: #ffffff;                            /* ← color texto del botón "Iniciar Sesión" en navbar */
   text-decoration: none;
   padding: 0.45rem 1rem;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid rgba(255, 255, 255, 0.6); /* ← borde del botón outline en navbar */
   border-radius: 8px;
   transition: background 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
 }
 
 .navbar-btn-outline:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: rgba(255, 255, 255, 0.15);    /* ← fondo hover del botón outline en navbar */
+  border-color: rgba(255, 255, 255, 0.9);   /* ← borde hover del botón outline en navbar */
 }
 
 .navbar-btn-solid {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #fff;
+  color: #D4621A;               /* ← color texto del botón "Registrarse" en navbar */
   text-decoration: none;
   padding: 0.45rem 1rem;
-  background: #3ab56e;
-  border: 1.5px solid #3ab56e;
+  background: #ffffff;          /* ← fondo del botón "Registrarse" en navbar */
+  border: 1.5px solid #ffffff;
   border-radius: 8px;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
 .navbar-btn-solid:hover {
-  background: #2ea05f;
-  border-color: #2ea05f;
+  background: #FEF3E8;          /* ← fondo hover del botón "Registrarse" en navbar */
+  color: #B85415;               /* ← color hover texto del botón "Registrarse" */
 }
 
 /* Hamburger (mobile only) */
@@ -181,7 +189,7 @@
   display: block;
   width: 22px;
   height: 2px;
-  background: #374151;
+  background: #ffffff;          /* ← color de las líneas del menú hamburger */
   border-radius: 2px;
   transition: all 0.2s ease;
 }
@@ -201,9 +209,9 @@
   left: 0;
   right: 0;
   z-index: 39;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  background: #ffffff;          /* ← fondo del menú desplegable mobile */
+  border-bottom: 1px solid #F5C8A8; /* ← borde inferior del menú mobile */
+  box-shadow: 0 8px 20px rgba(180, 70, 10, 0.12); /* ← sombra del menú mobile */
   padding: 0.75rem 1.25rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -214,11 +222,22 @@
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
   border-radius: 10px;
+  color: #3D1A02;               /* ← color de los links en el menú mobile */
+}
+
+.navbar-mobile .navbar-link:hover {
+  background: #FEF3E8;          /* ← fondo hover de los links en el menú mobile */
+  color: #D4621A;               /* ← color hover de los links en el menú mobile */
+}
+
+.navbar-mobile .navbar-link.active {
+  background: #FEF3E8;          /* ← fondo del link activo en el menú mobile */
+  color: #D4621A;               /* ← color del link activo en el menú mobile */
 }
 
 .navbar-mobile-divider {
   height: 1px;
-  background: #f3f4f6;
+  background: #F5C8A8;          /* ← color del separador en el menú mobile */
   margin: 0.5rem 0;
 }
 
@@ -238,6 +257,25 @@
   gap: 0.5rem;
 }
 
+.navbar-mobile-user .navbar-name {
+  color: #3D1A02;               /* ← color del nombre de usuario en menú mobile */
+}
+
+.navbar-mobile-user .navbar-points {
+  background: #FEF3E8;          /* ← fondo de la pastilla de puntos en menú mobile */
+  color: #D4621A;               /* ← color del texto de puntos en menú mobile */
+  border-color: #F5C8A8;        /* ← borde de la pastilla de puntos en menú mobile */
+}
+
+.navbar-mobile-user .navbar-logout {
+  color: #A08060;               /* ← color del botón "Salir" en menú mobile */
+}
+
+.navbar-mobile-user .navbar-logout:hover {
+  background: #FEF3E8;          /* ← fondo hover del botón "Salir" en menú mobile */
+  color: #D4621A;
+}
+
 .navbar-mobile-btn {
   display: block;
   text-align: center;
@@ -249,12 +287,31 @@
   transition: background 0.15s ease;
 }
 
+/* Botón outline mobile */
+.navbar-mobile .navbar-btn-outline {
+  color: #D4621A;               /* ← color texto del botón outline en mobile */
+  border-color: #F5C8A8;        /* ← borde del botón outline en mobile */
+}
+
+/* Botón sólido mobile */
+.navbar-mobile .navbar-btn-solid {
+  background: #D4621A;          /* ← fondo del botón sólido en mobile */
+  color: #ffffff;               /* ← color texto del botón sólido en mobile */
+  border-color: #D4621A;
+}
+
+.navbar-mobile .navbar-btn-solid:hover {
+  background: #B85415;          /* ← fondo hover del botón sólido en mobile */
+  border-color: #B85415;
+}
+
 /* ---- MAIN CONTENT OFFSET ---- */
 .app-main {
   padding-top: 64px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #FDF6EE;          /* ← color de fondo general de la página */
 }
 
 /* Dashboard sections constraint (cliente, vendedor, admin) */
@@ -268,8 +325,8 @@
 
 /* ---- FOOTER ---- */
 .footer {
-  background: #111827;
-  color: #9ca3af;
+  background: #3D1A02;          /* ← color de fondo del footer */
+  color: #A08060;               /* ← color de texto general del footer */
   padding: 2.5rem 2rem;
   margin-top: auto;
 }
@@ -312,13 +369,13 @@
 .footer-logo-text {
   font-size: 1.1rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.65); /* ← color del texto del logo en footer */
   letter-spacing: -0.3px;
 }
 
 .footer-tagline {
   font-size: 0.82rem;
-  color: #6b7280;
+  color: #A08060;               /* ← color del tagline en footer */
   font-weight: 500;
   margin: 0;
   letter-spacing: 0.01em;
@@ -331,7 +388,7 @@
 }
 
 .footer-link {
-  color: #9ca3af;
+  color: #A08060;               /* ← color de los links del footer */
   text-decoration: none;
   font-size: 0.875rem;
   transition: color 0.15s ease;
@@ -339,7 +396,7 @@
 }
 
 .footer-link:hover {
-  color: #3ab56e;
+  color: #F5C8A8;               /* ← color hover de los links del footer */
 }
 
 /* Derecha: redes sociales */
@@ -354,7 +411,7 @@
 }
 
 .social-btn {
-  color: #9ca3af;
+  color: #A08060;               /* ← color de los iconos de redes sociales */
   transition: color 0.15s ease, transform 0.15s ease;
   display: flex;
   align-items: center;
@@ -362,7 +419,7 @@
 }
 
 .social-btn:hover {
-  color: #3ab56e;
+  color: #F5C8A8;               /* ← color hover de los iconos de redes sociales */
   transform: translateY(-2px);
 }
 
@@ -417,4 +474,3 @@
     align-items: flex-end;
   }
 }
-

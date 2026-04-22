@@ -1,19 +1,47 @@
 import { Router } from "express";
 import { z } from "zod";
-import { pool, qOne, qRun } from "../db";
+import { pool, qOne, qAll, qRun } from "../db";
 import { requireAuth, requireRole } from "../auth";
 
 const router = Router();
 router.use(requireAuth, requireRole("vendedor", "admin"));
 
-// Buscar cliente por DNI
-router.get("/cliente/:dni", async (req, res) => {
-  const cliente = await qOne(pool,
-    "SELECT id, nombre, dni, email, puntos_saldo AS puntos FROM usuarios WHERE dni = ? AND rol = 'cliente'",
-    [req.params.dni]
-  );
-  if (!cliente) { res.status(404).json({ error: "Cliente no encontrado" }); return; }
-  res.json(cliente);
+// Buscar cliente por DNI (legacy / individual)
+router.get("/cliente/:dni", async (req, res, next) => {
+  try {
+    const cliente = await qOne(pool,
+      "SELECT id, nombre, dni, email, puntos_saldo AS puntos FROM usuarios WHERE dni = ? AND rol = 'cliente'",
+      [req.params.dni]
+    );
+    if (!cliente) { res.status(404).json({ error: "Cliente no encontrado" }); return; }
+    res.json(cliente);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Buscar clientes por nombre o DNI (real-time search)
+router.get("/clientes/buscar", async (req, res, next) => {
+  try {
+    const q = req.query.q;
+    if (!q || typeof q !== "string") { return res.json([]); }
+    
+    const cleanQ = q.trim();
+    if (cleanQ.length < 2) { return res.json([]); }
+
+    const term = `%${cleanQ}%`;
+    const rows = await qAll(pool,
+      `SELECT id, nombre, dni, email, puntos_saldo AS puntos 
+       FROM usuarios 
+       WHERE rol = 'cliente' 
+         AND (nombre LIKE ? OR dni LIKE ?)
+       LIMIT 10`,
+      [term, term]
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
 });
 
 // Cargar puntos usando productos del catálogo como referencia
@@ -26,20 +54,21 @@ const cargarSchema = z.object({
   descripcion: z.string().optional(),
 });
 
-router.post("/cargar", async (req, res) => {
+router.post("/cargar", async (req, res, next) => {
   const parsed = cargarSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
   const { dni, items, descripcion } = parsed.data;
 
-  const conn = await pool.getConnection();
+  let conn;
   try {
+    conn = await pool.getConnection();
     await conn.beginTransaction();
 
     const cliente = await qOne(conn,
       "SELECT id, puntos_saldo FROM usuarios WHERE dni = ? AND rol = 'cliente'",
       [dni]
     );
-    if (!cliente) { res.status(404).json({ error: "Cliente no encontrado" }); return; }
+    if (!cliente) { res.status(404).json({ error: "Cliente no encontrado" }); await conn.rollback(); return; }
 
     let totalPuntos = 0;
     for (const item of items) {
@@ -49,6 +78,7 @@ router.post("/cargar", async (req, res) => {
       );
       if (!prod) {
         res.status(400).json({ error: `Producto ${item.producto_id} no existe o está inactivo` });
+        await conn.rollback();
         return;
       }
       totalPuntos += (prod.puntos_acumulables ?? 0) * item.cantidad;
@@ -56,6 +86,7 @@ router.post("/cargar", async (req, res) => {
 
     if (totalPuntos === 0) {
       res.status(400).json({ error: "Los productos seleccionados no tienen puntos acumulables" });
+      await conn.rollback();
       return;
     }
 
@@ -75,10 +106,10 @@ router.post("/cargar", async (req, res) => {
       nuevo_saldo: cliente.puntos_saldo + totalPuntos,
     });
   } catch (err) {
-    await conn.rollback();
-    throw err;
+    if (conn) await conn.rollback();
+    next(err);
   } finally {
-    conn.release();
+    if (conn) conn.release();
   }
 });
 

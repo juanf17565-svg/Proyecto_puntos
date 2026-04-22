@@ -9,7 +9,11 @@ html, body {
 }
 
 body {
-  @apply bg-ios-bg text-neutral-900 font-sans;
+  /* ← color de fondo general del cuerpo de la página con un gradiente suave */
+  background: linear-gradient(135deg, #FDF6EE 0%, #F5E6D3 100%);
+  background-attachment: fixed;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
@@ -31,9 +35,15 @@ body {
   }
 
   .ios-input {
+    /* ← estilos base de los inputs en vistas de dashboard */
     @apply w-full bg-white rounded-xl px-4 py-3 text-base outline-none
-      border border-ios-border focus:border-ios-blue transition
-      placeholder:text-ios-tertiary;
+      border transition placeholder:text-[#C4A882];
+    border-color: #F0DBC5;      /* ← borde de los inputs en dashboard */
+  }
+
+  .ios-input:focus {
+    border-color: #D4621A;      /* ← borde de los inputs enfocados en dashboard */
+    box-shadow: 0 0 0 3px rgba(212, 98, 26, 0.15);
   }
 
   .ios-btn {
@@ -42,11 +52,21 @@ body {
   }
 
   .ios-btn-primary {
-    @apply ios-btn bg-ios-blue text-white;
+    /* ← botón primario en las vistas de dashboard */
+    background: #D4621A;        /* ← fondo del botón primario */
+    color: #ffffff;             /* ← color del texto del botón primario */
+    @apply ios-btn;
+  }
+
+  .ios-btn-primary:hover {
+    background: #B85415;        /* ← fondo hover del botón primario */
   }
 
   .ios-btn-secondary {
-    @apply ios-btn bg-ios-gray5 text-ios-blue;
+    /* ← botón secundario en las vistas de dashboard */
+    background: #FEF3E8;        /* ← fondo del botón secundario */
+    color: #D4621A;             /* ← color del texto del botón secundario */
+    @apply ios-btn;
   }
 
   .ios-btn-danger {
@@ -54,11 +74,13 @@ body {
   }
 
   .ios-label {
-    @apply text-xs uppercase tracking-wider text-ios-secondary px-4 pb-1;
+    @apply text-xs uppercase tracking-wider px-4 pb-1;
+    color: #A08060;             /* ← color de las etiquetas de sección */
   }
 
   .ios-title {
     @apply text-[34px] leading-tight font-bold tracking-tight;
+    color: #3D1A02;             /* ← color de los títulos principales en dashboard */
   }
 
   .ios-nav {
@@ -66,19 +88,41 @@ body {
   }
 
   .ios-segmented {
-    @apply flex bg-ios-gray5 rounded-xl p-1 gap-1;
+    @apply flex rounded-xl p-1 gap-1;
+    background: #F5C8A8;        /* ← fondo del control segmentado */
   }
 
   .ios-segmented button {
-    @apply flex-1 py-1.5 text-sm font-medium rounded-lg text-ios-label transition;
+    @apply flex-1 py-1.5 text-sm font-medium rounded-lg transition;
+    color: #3D1A02;             /* ← color del texto de los botones del segmentado */
   }
 
   .ios-segmented button.active {
-    @apply bg-white text-neutral-900 shadow-sm;
+    @apply bg-white shadow-sm;
+    color: #D4621A;             /* ← color del botón activo del segmentado */
+  }
+
+  /* ── Área de upload de imagen en admin ── */
+  .admin-upload-area {
+    border: 2px dashed #F5C8A8;     /* ← borde del área de subida de imagen */
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    background: #FFFAF5;            /* ← fondo del área de subida */
+    transition: border-color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+  }
+
+  .admin-upload-area:hover {
+    border-color: #D4621A;          /* ← borde hover del área de subida */
+    background: #FEF3E8;            /* ← fondo hover del área de subida */
   }
 
   .ios-chevron::after {
     content: "";
-    @apply inline-block w-2 h-2 border-r-2 border-b-2 border-ios-tertiary rotate-[-45deg];
+    @apply inline-block w-2 h-2 border-r-2 border-b-2 rotate-[-45deg];
+    border-color: #C4A882;      /* ← color del ícono chevron */
   }
 }

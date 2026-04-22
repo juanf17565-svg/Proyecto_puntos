@@ -1,151 +1,854 @@
-<!-- ── ADMIN ── -->
+<!-- ── ADMIN PANEL ── -->
 <section x-show="$store.router.current === '/admin'"
          x-data="adminView"
-         class="dashboard-section">
-  <h1 class="ios-title mb-4">Panel</h1>
+         class="admin-layout">
 
-  <div class="grid grid-cols-2 gap-3 mb-5">
-    <div class="ios-card p-4">
-      <p class="text-xs text-ios-secondary">Clientes</p>
-      <p class="text-2xl font-bold mt-1" x-text="stats?.clientes ?? '—'"></p>
+  <!-- ════════ SIDEBAR ════════ -->
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <p class="admin-brand-name" x-text="$store.auth.user?.nombre ?? 'Admin'"></p>
+      <p class="admin-brand-role">Administrador</p>
     </div>
-    <div class="ios-card p-4">
-      <p class="text-xs text-ios-secondary">Productos activos</p>
-      <p class="text-2xl font-bold mt-1" x-text="stats?.productos ?? '—'"></p>
-    </div>
-    <div class="ios-card p-4">
-      <p class="text-xs text-ios-secondary">Transacciones</p>
-      <p class="text-2xl font-bold mt-1" x-text="stats?.transacciones ?? '—'"></p>
-    </div>
-    <div class="ios-card p-4">
-      <p class="text-xs text-ios-secondary">Puntos emitidos</p>
-      <p class="text-2xl font-bold mt-1" x-text="stats?.puntos_emitidos ?? '—'"></p>
-    </div>
-  </div>
 
-  <div class="ios-segmented mb-4 text-xs">
-    <button :class="tab === 'usuarios' && 'active'" @click="tab = 'usuarios'">Usuarios</button>
-    <button :class="tab === 'productos' && 'active'" @click="tab = 'productos'">Productos</button>
-    <button :class="tab === 'transacciones' && 'active'" @click="tab = 'transacciones'">Movim.</button>
-    <button :class="tab === 'crear' && 'active'" @click="tab = 'crear'">Nuevo</button>
-  </div>
+    <nav class="admin-nav">
+      <span class="admin-nav-section">General</span>
 
-  <!-- Tab Usuarios -->
-  <div x-show="tab === 'usuarios'" class="ios-card ios-list">
-    <template x-for="u in usuarios" :key="u.id">
-      <div class="ios-row">
-        <div class="min-w-0">
-          <p class="text-base font-medium truncate" x-text="u.nombre"></p>
-          <p class="text-xs text-ios-secondary truncate">
-            <span class="capitalize" x-text="u.rol"></span>
-            <template x-if="u.dni"><span> · DNI <span x-text="u.dni"></span></span></template>
-            · <span x-text="u.email"></span>
-          </p>
+      <button class="admin-nav-btn" :class="tab==='inicio' && 'active'" @click="tab='inicio'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+        <span>Inicio</span>
+      </button>
+
+      <span class="admin-nav-section">Gestión</span>
+
+      <button class="admin-nav-btn" :class="tab==='usuarios' && 'active'" @click="tab='usuarios'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+        <span>Usuarios</span>
+      </button>
+
+      <button class="admin-nav-btn" :class="tab==='productos' && 'active'" @click="tab='productos'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+        <span>Productos</span>
+      </button>
+
+      <button class="admin-nav-btn" :class="tab==='categorias' && 'active'" @click="tab='categorias'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/></svg>
+        <span>Categorías</span>
+      </button>
+
+      <button class="admin-nav-btn" :class="tab==='transacciones' && 'active'" @click="tab='transacciones'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
+        <span>Movimientos</span>
+      </button>
+
+      <button class="admin-nav-btn" :class="tab==='canjes' && 'active'" @click="tab='canjes'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/></svg>
+        <span>Canjes</span>
+      </button>
+
+      <button class="admin-nav-btn" :class="tab==='codigos' && 'active'" @click="tab='codigos'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z"/></svg>
+        <span>Códigos Promo</span>
+      </button>
+
+      <span class="admin-nav-section">Configuración</span>
+
+      <button class="admin-nav-btn" :class="tab==='crear' && 'active'" @click="tab='crear'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21a12.318 12.318 0 01-6.374-1.766z"/></svg>
+        <span>Crear Usuario</span>
+      </button>
+
+      <button class="admin-nav-btn" :class="tab==='paginas' && 'active'" @click="tab='paginas'">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+        <span>Páginas Web</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- ════════ MAIN ════════ -->
+  <main class="admin-main">
+
+    <!-- Topbar -->
+    <div class="admin-topbar">
+      <div>
+        <h1 class="admin-topbar-title">
+          Hola, <span x-text="$store.auth.user?.nombre?.split(' ')[0] ?? 'Admin'"></span>
+        </h1>
+        <p class="admin-topbar-sub">Aquí tenés el resumen del negocio</p>
+      </div>
+      <div class="admin-topbar-date"
+           x-text="new Date().toLocaleDateString('es-AR', {weekday:'long',day:'numeric',month:'long',year:'numeric'})">
+      </div>
+    </div>
+
+    <div class="admin-content">
+
+      <!-- ── Stats (siempre visibles) ── -->
+      <div class="admin-stats">
+        <div class="admin-stat-card">
+          <p class="admin-stat-label">Clientes</p>
+          <p class="admin-stat-value" x-text="stats?.clientes ?? '—'"></p>
         </div>
-        <span class="text-sm font-semibold shrink-0" x-text="u.puntos + ' pts'"></span>
+        <div class="admin-stat-card">
+          <p class="admin-stat-label">Productos activos</p>
+          <p class="admin-stat-value" x-text="stats?.productos ?? '—'"></p>
+        </div>
+        <div class="admin-stat-card">
+          <p class="admin-stat-label">Canjes pendientes</p>
+          <p class="admin-stat-value accent" x-text="stats?.canjes_pendientes ?? '—'"></p>
+        </div>
+        <div class="admin-stat-card">
+          <p class="admin-stat-label">Puntos emitidos</p>
+          <p class="admin-stat-value" x-text="stats?.puntos_emitidos ?? '—'"></p>
+        </div>
       </div>
-    </template>
-  </div>
 
-  <!-- Tab Productos -->
-  <div x-show="tab === 'productos'" class="space-y-3">
-    <div class="ios-card p-4 space-y-2">
-      <p class="text-sm font-semibold mb-1">Nuevo producto</p>
-      <input class="ios-input" placeholder="Nombre" x-model="nuevoProducto.nombre" />
-      <div class="flex gap-2">
-        <input type="number" min="0" step="0.01" class="ios-input" placeholder="Precio" x-model.number="nuevoProducto.precio" />
-        <input type="number" min="0" step="1" class="ios-input" placeholder="Pts/unidad" x-model.number="nuevoProducto.puntos_por_unidad" />
+      <!-- ══════════════════════════════
+           TAB: INICIO
+           ══════════════════════════════ -->
+      <div x-show="tab === 'inicio'">
+        <div class="admin-section-header">
+          <h2 class="admin-section-title">Últimos movimientos</h2>
+          <button class="adm-btn-link" @click="tab='transacciones'">Ver todos →</button>
+        </div>
+        <div class="admin-card">
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Tipo</th>
+                  <th>Puntos</th>
+                  <th>Descripción</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-if="txs.length === 0">
+                  <tr><td colspan="5" class="adm-empty">Sin movimientos aún.</td></tr>
+                </template>
+                <template x-for="t in txs.slice(0,8)" :key="t.id">
+                  <tr>
+                    <td x-text="t.usuario_nombre"></td>
+                    <td>
+                      <span class="adm-badge adm-badge-neutral"
+                            x-text="t.tipo?.replace(/_/g,' ')"></span>
+                    </td>
+                    <td :class="t.puntos >= 0 ? 'adm-pts-pos' : 'adm-pts-neg'"
+                        x-text="(t.puntos >= 0 ? '+' : '') + t.puntos + ' pts'"></td>
+                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8B5A30"
+                        x-text="t.descripcion || '—'"></td>
+                    <td style="color:#8B5A30;white-space:nowrap" x-text="formatDate(t.created_at)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <p class="text-ios-red text-sm" x-show="errMsg" x-text="errMsg"></p>
-      <p class="text-ios-green text-sm font-medium" x-show="okMsg" x-text="okMsg"></p>
-      <button type="button" class="ios-btn-primary" :disabled="busy" @click="crearProducto">Crear producto</button>
-    </div>
-    <div class="ios-card ios-list">
-      <template x-for="p in productos" :key="p.id">
-        <div class="px-4 py-3">
-          <template x-if="editId !== p.id">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-base font-medium truncate"
-                   :class="!p.activo && 'text-ios-tertiary line-through'"
-                   x-text="p.nombre"></p>
-                <p class="text-xs text-ios-secondary">
-                  $<span x-text="formatMoney(p.precio)"></span>
-                  · <span x-text="p.puntos_por_unidad"></span> pts c/u
-                </p>
+
+      <!-- ══════════════════════════════
+           TAB: USUARIOS
+           ══════════════════════════════ -->
+      <div x-show="tab === 'usuarios'">
+        <div class="admin-section-header">
+          <h2 class="admin-section-title">Usuarios registrados</h2>
+          <button class="adm-btn-link" @click="tab='crear'">+ Crear usuario</button>
+        </div>
+        <div class="admin-card">
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>DNI</th>
+                  <th>Puntos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-if="usuarios.length === 0">
+                  <tr><td colspan="5" class="adm-empty">Sin usuarios registrados.</td></tr>
+                </template>
+                <template x-for="u in usuarios" :key="u.id">
+                  <tr>
+                    <td x-text="u.nombre"></td>
+                    <td style="color:#8B5A30" x-text="u.email"></td>
+                    <td>
+                      <span class="adm-badge"
+                            :class="u.rol==='admin' ? 'adm-badge-admin' : u.rol==='vendedor' ? 'adm-badge-vendedor' : 'adm-badge-cliente'"
+                            x-text="u.rol"></span>
+                    </td>
+                    <td style="color:#8B5A30" x-text="u.dni || '—'"></td>
+                    <td class="adm-pts-pos" x-text="(u.puntos_saldo ?? 0) + ' pts'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           TAB: PRODUCTOS
+           ══════════════════════════════ -->
+      <div x-show="tab === 'productos'" style="display:flex;flex-direction:column;gap:1.5rem;">
+
+        <!-- Formulario nuevo producto -->
+        <div>
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">Nuevo producto</h2>
+          </div>
+          <div class="admin-card admin-card-padded" style="display:flex;flex-direction:column;gap:0.9rem;">
+
+            <div class="adm-field">
+              <label class="adm-label">
+                Nombre *
+                <span class="adm-tip" data-tip="Nombre visible en el catálogo público. Ej: Alfajor de Hibiscus">?</span>
+              </label>
+              <input class="adm-input" placeholder="Ej: Alfajor de Hibiscus" x-model="nuevoProducto.nombre" />
+            </div>
+
+            <div class="adm-field">
+              <label class="adm-label">
+                Descripción
+                <span class="adm-tip" data-tip="Texto breve que aparece debajo del nombre en cada tarjeta del catálogo. Opcional.">?</span>
+              </label>
+              <input class="adm-input" placeholder="Ej: Alfajor artesanal relleno de dulce de leche..." x-model="nuevoProducto.descripcion" />
+            </div>
+
+            <div class="adm-field">
+              <label class="adm-label">
+                Categoría
+                <span class="adm-tip" data-tip="Agrupa los productos en el filtro del catálogo. Si no se completa, el producto no aparece en el filtro de categorías.">?</span>
+              </label>
+              <select class="adm-input" x-model="nuevoProducto.categoria">
+                <option value="">-- Sin categoría --</option>
+                <template x-for="c in categorias" :key="c.id">
+                  <option :value="c.nombre" x-text="c.nombre"></option>
+                </template>
+              </select>
+            </div>
+
+            <div class="adm-form-grid">
+              <div class="adm-field">
+                <label class="adm-label">
+                  Puntos para canjear *
+                  <span class="adm-tip" data-tip="Cuántos puntos gasta el cliente para obtener este producto. Debe ser mayor a 0. El cliente solo puede canjear si tiene ese saldo.">?</span>
+                </label>
+                <input type="number" min="1" step="1" class="adm-input" placeholder="Ej: 500"
+                       x-model.number="nuevoProducto.puntos_requeridos" />
               </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <button type="button" class="text-ios-blue text-sm font-medium" @click="startEdit(p)">Editar</button>
-                <button type="button" class="text-sm font-medium"
-                        :class="p.activo ? 'text-ios-red' : 'text-ios-green'"
-                        @click="toggleActivo(p)">
-                  <span x-text="p.activo ? 'Desactivar' : 'Activar'"></span>
-                </button>
+              <div class="adm-field">
+                <label class="adm-label">
+                  Puntos que acumula
+                  <span class="adm-tip" data-tip="Opcional. Puntos que gana el cliente al COMPRAR (no canjear) este producto en el local. Si se deja en 0 o vacío, no se acumulan puntos por compra.">?</span>
+                </label>
+                <input type="number" min="0" step="1" class="adm-input" placeholder="0 = no acumula"
+                       x-model.number="nuevoProducto.puntos_acumulables" />
               </div>
             </div>
-          </template>
-          <template x-if="editId === p.id">
-            <div class="space-y-2">
-              <input class="ios-input" x-model="editDraft.nombre" />
-              <div class="flex gap-2">
-                <input type="number" min="0" step="0.01" class="ios-input" x-model.number="editDraft.precio" />
-                <input type="number" min="0" step="1" class="ios-input" x-model.number="editDraft.puntos_por_unidad" />
-              </div>
-              <div class="flex gap-2">
-                <button type="button" class="ios-btn-primary" @click="saveEdit(p)">Guardar</button>
-                <button type="button" class="ios-btn-secondary" @click="cancelEdit">Cancelar</button>
-              </div>
-            </div>
-          </template>
-        </div>
-      </template>
-    </div>
-  </div>
 
-  <!-- Tab Transacciones -->
-  <div x-show="tab === 'transacciones'" class="ios-card ios-list">
-    <template x-if="txs.length === 0">
-      <div class="ios-row text-ios-secondary text-sm"><span>Sin movimientos aún.</span></div>
-    </template>
-    <template x-for="t in txs" :key="t.id">
-      <div class="px-4 py-3">
-        <div class="flex items-center justify-between">
-          <p class="text-base font-medium truncate" x-text="t.cliente_nombre"></p>
-          <span class="text-sm font-semibold text-ios-green shrink-0">+<span x-text="t.total_puntos"></span></span>
+            <div class="adm-field">
+              <label class="adm-label">
+                Imagen
+                <span class="adm-tip" data-tip="JPG, PNG o WEBP. Máximo 5 MB. Se muestra en la tarjeta del catálogo. Si no se sube imagen, se muestra un ícono genérico.">?</span>
+              </label>
+              <div class="adm-upload" @click="$refs.fileNuevo.click()">
+                <template x-if="!nuevoProducto.imagen_preview">
+                  <div>
+                    <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 0.4rem;display:block;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                    <span style="font-size:0.8rem;">Subir imagen (JPG, PNG, WEBP · máx 5 MB)</span>
+                  </div>
+                </template>
+                <template x-if="nuevoProducto.imagen_preview">
+                  <img :src="nuevoProducto.imagen_preview"
+                       style="height:80px;object-fit:contain;display:block;margin:0 auto;border-radius:8px;" />
+                </template>
+              </div>
+              <input type="file" x-ref="fileNuevo" accept="image/jpeg,image/png,image/webp"
+                     style="display:none" @change="seleccionarImagen($event, 'nuevo')" />
+            </div>
+
+            <div x-show="errMsg" class="adm-msg-err" x-text="errMsg"></div>
+            <div x-show="okMsg" class="adm-msg-ok" x-text="okMsg"></div>
+            <button class="adm-btn-primary" :disabled="busy" @click="crearProducto()">
+              <span x-show="!busy">Crear producto</span>
+              <span x-show="busy">Creando…</span>
+            </button>
+          </div>
         </div>
-        <p class="text-xs text-ios-secondary mt-0.5">
-          $<span x-text="formatMoney(t.total_monto)"></span>
-          · <span x-text="t.vendedor_nombre"></span>
-          · <span x-text="formatDate(t.creado_en)"></span>
-        </p>
-        <template x-if="t.items && t.items.length">
-          <ul class="mt-1 text-xs text-ios-label">
-            <template x-for="(it, i) in t.items" :key="i">
-              <li><span x-text="it.cantidad"></span>× <span x-text="it.nombre"></span></li>
+
+        <!-- Lista de productos existentes -->
+        <div>
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">Productos existentes</h2>
+          </div>
+          <div class="admin-card">
+            <template x-if="productos.length === 0">
+              <p class="adm-empty">Sin productos. Creá uno arriba.</p>
             </template>
-          </ul>
+            <template x-for="p in productos" :key="p.id">
+              <div class="adm-product-row">
+
+                <!-- Vista normal -->
+                <template x-if="editId !== p.id">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.85rem;min-width:0;">
+                      <template x-if="p.imagen_url">
+                        <img :src="p.imagen_url"
+                             style="width:42px;height:42px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid rgba(212,98,26,0.2);" />
+                      </template>
+                      <template x-if="!p.imagen_url">
+                        <div style="width:42px;height:42px;border-radius:8px;background:rgba(212,98,26,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                          <svg width="18" height="18" fill="none" stroke="#A08060" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+                        </div>
+                      </template>
+                      <div style="min-width:0;">
+                        <p style="font-size:0.9rem;font-weight:600;color:#2D1200;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                           :class="!p.activo && 'line-through'"
+                           x-text="p.nombre"></p>
+                        <p style="font-size:0.75rem;color:#8B5A30;margin:0.15rem 0 0;">
+                          <span x-text="p.categoria || 'Sin categoría'"></span>
+                          · <span x-text="p.puntos_requeridos"></span> pts canje
+                          <template x-if="p.puntos_acumulables">
+                            <span> · +<span x-text="p.puntos_acumulables"></span> acumula</span>
+                          </template>
+                        </p>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+                      <span class="adm-badge"
+                            :class="p.activo ? 'adm-badge-active' : 'adm-badge-inactive'"
+                            x-text="p.activo ? 'Activo' : 'Inactivo'"></span>
+                      <button class="adm-btn-link" @click="startEdit(p)">Editar</button>
+                      <button :class="p.activo ? 'adm-btn-danger' : 'adm-btn-success'"
+                              @click="toggleActivo(p)"
+                              x-text="p.activo ? 'Desactivar' : 'Activar'"></button>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Formulario de edición inline -->
+                <template x-if="editId === p.id">
+                  <div style="display:flex;flex-direction:column;gap:0.85rem;">
+                    <p style="font-size:0.8rem;font-weight:700;color:#D4621A;margin:0;">Editando: <span x-text="p.nombre"></span></p>
+                    <div class="adm-form-grid">
+                      <div class="adm-field">
+                        <label class="adm-label">Nombre *
+                          <span class="adm-tip" data-tip="Nombre visible del producto en el catálogo">?</span>
+                        </label>
+                        <input class="adm-input" placeholder="Nombre" x-model="editDraft.nombre" />
+                      </div>
+                      <div class="adm-field">
+                        <label class="adm-label">Categoría
+                          <span class="adm-tip" data-tip="Agrupa los productos en el filtro.">?</span>
+                        </label>
+                        <select class="adm-input" x-model="editDraft.categoria">
+                          <option value="">-- Sin categoría --</option>
+                          <template x-for="c in categorias" :key="c.id">
+                            <option :value="c.nombre" x-text="c.nombre"></option>
+                          </template>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="adm-field">
+                      <label class="adm-label">Descripción
+                        <span class="adm-tip" data-tip="Texto breve que aparece en la tarjeta del catálogo">?</span>
+                      </label>
+                      <input class="adm-input" placeholder="Descripción" x-model="editDraft.descripcion" />
+                    </div>
+                    <div class="adm-form-grid">
+                      <div class="adm-field">
+                        <label class="adm-label">Pts para canjear *
+                          <span class="adm-tip" data-tip="Puntos que el cliente gasta para obtener este producto">?</span>
+                        </label>
+                        <input type="number" min="1" class="adm-input" x-model.number="editDraft.puntos_requeridos" />
+                      </div>
+                      <div class="adm-field">
+                        <label class="adm-label">Pts que acumula
+                          <span class="adm-tip" data-tip="Puntos que gana el cliente al COMPRAR este producto en el local">?</span>
+                        </label>
+                        <input type="number" min="0" class="adm-input" x-model.number="editDraft.puntos_acumulables" />
+                      </div>
+                    </div>
+                    <div class="adm-field">
+                      <label class="adm-label">Imagen (opcional)
+                        <span class="adm-tip" data-tip="Si no seleccionás una imagen nueva, se conserva la actual">?</span>
+                      </label>
+                      <div class="adm-upload" @click="$refs.fileEdit.click()">
+                        <template x-if="editDraft.imagen_preview || editDraft.imagen_url">
+                          <img :src="editDraft.imagen_preview || editDraft.imagen_url"
+                               style="height:64px;object-fit:contain;display:block;border-radius:8px;" />
+                        </template>
+                        <template x-if="!editDraft.imagen_preview && !editDraft.imagen_url">
+                          <span style="font-size:0.8rem;">Cambiar imagen (opcional)</span>
+                        </template>
+                      </div>
+                      <input type="file" x-ref="fileEdit" accept="image/jpeg,image/png,image/webp"
+                             style="display:none" @change="seleccionarImagen($event, 'edit')" />
+                    </div>
+                    <div style="display:flex;gap:0.75rem;">
+                      <button class="adm-btn-primary" style="flex:2;" :disabled="busy" @click="saveEdit(p)">
+                        <span x-show="!busy">Guardar cambios</span>
+                        <span x-show="busy">Guardando…</span>
+                      </button>
+                      <button class="adm-btn-secondary" @click="cancelEdit()">Cancelar</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           TAB: CANJES
+           ══════════════════════════════ -->
+      <div x-show="tab === 'canjes'">
+        <div class="admin-section-header">
+          <h2 class="admin-section-title">Gestión de Canjes</h2>
+          <p class="admin-section-subtitle">Control de retiros de productos por puntos</p>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Cód / Fecha</th>
+                  <th>Cliente</th>
+                  <th>Producto</th>
+                  <th>Puntos</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-if="canjes.length === 0">
+                  <tr><td colspan="6" class="adm-empty">No hay canjes registrados.</td></tr>
+                </template>
+                <template x-for="c in canjes" :key="c.id">
+                  <tr>
+                    <td>
+                      <div class="text-xs font-bold" x-text="'#' + c.id"></div>
+                      <div class="text-[10px] text-ios-secondary" x-text="formatDate(c.created_at)"></div>
+                    </td>
+                    <td>
+                      <div class="font-medium" x-text="c.usuario_nombre"></div>
+                      <div class="text-[10px] text-ios-secondary" x-text="'DNI: ' + c.usuario_dni"></div>
+                    </td>
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <img :src="c.producto_imagen" class="w-6 h-6 rounded object-cover" x-show="c.producto_imagen" />
+                        <span x-text="c.producto_nombre"></span>
+                      </div>
+                    </td>
+                    <td class="font-bold text-ios-red" x-text="'-' + c.puntos_usados"></td>
+                    <td>
+                      <span class="adm-badge" 
+                            :class="{
+                              'adm-badge-warn': c.estado === 'pendiente',
+                              'adm-badge-success': c.estado === 'entregado',
+                              'adm-badge-danger': ['cancelado','expirado'].includes(c.estado)
+                            }"
+                            x-text="c.estado.toUpperCase()"></span>
+                    </td>
+                    <td>
+                      <div class="flex gap-1" x-show="c.estado === 'pendiente'">
+                        <button class="adm-btn-primary text-[10px] py-1 px-2" @click="actualizarEstadoCanje(c.id, 'entregado')">Entregar</button>
+                        <button class="adm-btn-danger text-[10px] py-1 px-2" @click="actualizarEstadoCanje(c.id, 'cancelado')">Anular</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           TAB: CATEGORÍAS
+           ══════════════════════════════ -->
+      <div x-show="tab === 'categorias'" style="display:flex;flex-direction:column;gap:1.5rem;">
+        <div>
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">Nueva categoría</h2>
+          </div>
+          <div class="admin-card admin-card-padded" style="display:flex;flex-direction:column;gap:0.9rem;">
+            <div class="adm-field">
+              <label class="adm-label">Nombre *</label>
+              <input class="adm-input" placeholder="Ej: Alfajores" x-model="nuevaCategoria.nombre" />
+            </div>
+            <div class="adm-field">
+              <label class="adm-label">Descripción</label>
+              <input class="adm-input" placeholder="Opcional..." x-model="nuevaCategoria.descripcion" />
+            </div>
+            <div x-show="errMsg" class="adm-msg-err" x-text="errMsg"></div>
+            <div x-show="okMsg" class="adm-msg-ok" x-text="okMsg"></div>
+            <button class="adm-btn-primary" :disabled="busy" @click="crearCategoria()">
+              <span x-show="!busy">Crear categoría</span>
+              <span x-show="busy">Creando…</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">Categorías existentes</h2>
+          </div>
+          <div class="admin-card">
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-if="categorias.length === 0">
+                    <tr><td colspan="3" class="adm-empty">Sin categorías creadas.</td></tr>
+                  </template>
+                  <template x-for="c in categorias" :key="c.id">
+                    <tr>
+                      <td style="font-weight:600" x-text="c.nombre"></td>
+                      <td style="color:#8B5A30" x-text="c.descripcion || '—'"></td>
+                      <td>
+                        <button class="adm-btn-danger" @click="eliminarCategoria(c.id)">Eliminar</button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           TAB: MOVIMIENTOS
+           ══════════════════════════════ -->
+      <div x-show="tab === 'transacciones'">
+        <div class="admin-section-header">
+          <h2 class="admin-section-title">Historial de movimientos</h2>
+        </div>
+        <div class="admin-card">
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Tipo</th>
+                  <th>Puntos</th>
+                  <th>Descripción</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-if="txs.length === 0">
+                  <tr><td colspan="5" class="adm-empty">Sin movimientos registrados.</td></tr>
+                </template>
+                <template x-for="t in txs" :key="t.id">
+                  <tr>
+                    <td>
+                      <p style="margin:0;font-weight:500" x-text="t.usuario_nombre"></p>
+                      <p style="margin:0;font-size:0.72rem;color:#8B5A30" x-text="t.usuario_email"></p>
+                    </td>
+                    <td>
+                      <span class="adm-badge adm-badge-neutral"
+                            x-text="t.tipo?.replace(/_/g,' ')"></span>
+                    </td>
+                    <td :class="t.puntos >= 0 ? 'adm-pts-pos' : 'adm-pts-neg'"
+                        x-text="(t.puntos >= 0 ? '+' : '') + t.puntos + ' pts'"></td>
+                    <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8B5A30"
+                        x-text="t.descripcion || '—'"></td>
+                    <td style="color:#8B5A30;white-space:nowrap" x-text="formatDate(t.created_at)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           TAB: CÓDIGOS PROMO
+           ══════════════════════════════ -->
+      <div x-show="tab === 'codigos'" style="display:flex;flex-direction:column;gap:1.5rem;">
+
+        <!-- Formulario crear código -->
+        <div>
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">Nuevo código promocional</h2>
+          </div>
+          <div class="admin-card admin-card-padded" style="display:flex;flex-direction:column;gap:0.9rem;">
+
+            <div class="adm-field">
+              <label class="adm-label">
+                Código *
+                <span class="adm-tip" data-tip="El texto que el cliente ingresa para canjear puntos. Solo letras y números, sin espacios. Se convierte automáticamente a mayúsculas. Ej: VERANO24, BIENVENIDA, PROMO50.">?</span>
+              </label>
+              <input class="adm-input" placeholder="Ej: VERANO24"
+                     style="text-transform:uppercase;letter-spacing:0.08em;font-weight:600;"
+                     x-model="nuevoCodigo.codigo" />
+            </div>
+
+            <div class="adm-form-grid">
+              <div class="adm-field">
+                <label class="adm-label">
+                  Puntos que da *
+                  <span class="adm-tip" data-tip="Cantidad de puntos que se acreditan en la cuenta del cliente cuando usa este código. Debe ser mayor a 0.">?</span>
+                </label>
+                <input type="number" min="1" step="1" class="adm-input" placeholder="Ej: 100"
+                       x-model.number="nuevoCodigo.puntos_valor" />
+              </div>
+              <div class="adm-field">
+                <label class="adm-label">
+                  Usos máximos
+                  <span class="adm-tip" data-tip="Cuántas veces puede usarse este código en total (entre todos los clientes). Ponés 0 para uso ilimitado. Cada cliente solo puede usarlo una vez, aunque el límite general sea mayor.">?</span>
+                </label>
+                <input type="number" min="0" step="1" class="adm-input" placeholder="0 = ilimitado"
+                       x-model.number="nuevoCodigo.usos_maximos" />
+              </div>
+            </div>
+
+            <div class="adm-field">
+              <label class="adm-label">
+                Fecha de expiración
+                <span class="adm-tip" data-tip="Opcional. Después de esta fecha el código no puede usarse. Si se deja vacío, el código no tiene fecha límite.">?</span>
+              </label>
+              <input type="datetime-local" class="adm-input" x-model="nuevoCodigo.fecha_expiracion" />
+            </div>
+
+            <div x-show="errMsg" class="adm-msg-err" x-text="errMsg"></div>
+            <div x-show="okMsg" class="adm-msg-ok" x-text="okMsg"></div>
+            <button class="adm-btn-primary" :disabled="busy" @click="crearCodigo()">
+              <span x-show="!busy">Crear código</span>
+              <span x-show="busy">Creando…</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de códigos existentes -->
+        <div>
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">Códigos existentes</h2>
+          </div>
+          <div class="admin-card">
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Puntos</th>
+                    <th>Usos</th>
+                    <th>Vence</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-if="codigos.length === 0">
+                    <tr><td colspan="6" class="adm-empty">Sin códigos creados.</td></tr>
+                  </template>
+                  <template x-for="c in codigos" :key="c.id">
+                    <tr>
+                      <td>
+                        <span class="adm-code-chip" :class="!c.activo && 'opacity-50'"
+                              x-text="c.codigo"></span>
+                      </td>
+                      <td class="adm-pts-pos" x-text="'+' + c.puntos_valor + ' pts'"></td>
+                      <td style="color:#8B5A30">
+                        <span x-text="c.usos_actuales"></span>
+                        /
+                        <span x-text="c.usos_maximos > 0 ? c.usos_maximos : '∞'"></span>
+                      </td>
+                      <td style="color:#8B5A30;white-space:nowrap"
+                          x-text="c.fecha_expiracion ? formatDate(c.fecha_expiracion) : '—'"></td>
+                      <td>
+                        <span class="adm-badge"
+                              :class="c.activo ? 'adm-badge-active' : 'adm-badge-inactive'"
+                              x-text="c.activo ? 'Activo' : 'Inactivo'"></span>
+                      </td>
+                      <td>
+                        <button :class="c.activo ? 'adm-btn-danger' : 'adm-btn-success'"
+                                @click="toggleCodigo(c)"
+                                x-text="c.activo ? 'Desactivar' : 'Activar'"></button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           TAB: CREAR USUARIO
+           ══════════════════════════════ -->
+      <div x-show="tab === 'crear'">
+        <div class="admin-section-header">
+          <h2 class="admin-section-title">Crear usuario</h2>
+        </div>
+        <div class="admin-card admin-card-padded" style="max-width:520px;display:flex;flex-direction:column;gap:0.9rem;">
+
+          <div class="adm-field">
+            <label class="adm-label">
+              Nombre completo *
+              <span class="adm-tip" data-tip="Nombre y apellido del usuario. Se muestra en el panel y en el banner de bienvenida.">?</span>
+            </label>
+            <input class="adm-input" placeholder="Ej: María González"
+                   x-model="nuevoUsuario.nombre" />
+          </div>
+
+          <div class="adm-field">
+            <label class="adm-label">
+              Email *
+              <span class="adm-tip" data-tip="Dirección de correo para iniciar sesión. Debe ser único en el sistema.">?</span>
+            </label>
+            <input type="email" class="adm-input" placeholder="Ej: maria@email.com"
+                   x-model="nuevoUsuario.email" />
+          </div>
+
+          <div class="adm-field">
+            <label class="adm-label">
+              Contraseña *
+              <span class="adm-tip" data-tip="Contraseña inicial del usuario. Mínimo 6 caracteres. El usuario puede cambiarla luego.">?</span>
+            </label>
+            <input type="password" class="adm-input" placeholder="Mínimo 6 caracteres"
+                   x-model="nuevoUsuario.password" minlength="6" />
+          </div>
+
+          <div class="adm-field">
+            <label class="adm-label">
+              Rol *
+              <span class="adm-tip" data-tip="Cliente: puede ver su saldo y canjear puntos. Vendedor: puede cargar puntos a clientes. Admin: acceso completo al panel.">?</span>
+            </label>
+            <select class="adm-input" x-model="nuevoUsuario.rol">
+              <option value="cliente">Cliente</option>
+              <option value="vendedor">Vendedor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          <div class="adm-field" x-show="nuevoUsuario.rol === 'cliente'">
+            <label class="adm-label">
+              DNI *
+              <span class="adm-tip" data-tip="Número de documento del cliente. Se usa para identificarlo cuando el vendedor carga puntos en el local. Requerido solo para clientes.">?</span>
+            </label>
+            <input class="adm-input" placeholder="Ej: 38254710"
+                   x-model="nuevoUsuario.dni"
+                   :required="nuevoUsuario.rol === 'cliente'" />
+          </div>
+
+          <div x-show="errMsg" class="adm-msg-err" x-text="errMsg"></div>
+          <div x-show="okMsg" class="adm-msg-ok" x-text="okMsg"></div>
+          <button class="adm-btn-primary" :disabled="busy" @click="crearUsuario()">
+            <span x-show="!busy">Crear usuario</span>
+            <span x-show="busy">Creando…</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           TAB: PÁGINAS WEB
+           ══════════════════════════════ -->
+      <div x-show="tab === 'paginas'">
+        <div class="admin-section-header">
+          <h2 class="admin-section-title">Páginas de contenido</h2>
+        </div>
+
+        <!-- Dos bloques de notas lado a lado -->
+        <div class="adm-notepads-grid">
+
+          <!-- ── Bloque: Sobre Nosotros ── -->
+          <div class="adm-notepad">
+            <div class="adm-notepad-header">
+              <p class="adm-notepad-header-title">Quiénes Somos</p>
+              <span class="adm-notepad-md-badge">Markdown</span>
+            </div>
+            <div class="adm-notepad-body">
+              <input class="adm-notepad-title-input"
+                     placeholder="Título de la página..."
+                     x-model="sobreDraft.titulo" />
+              <textarea class="adm-notepad-textarea"
+                        placeholder="# Sobre Nosotros&#10;&#10;Escribí el contenido de la página aquí usando Markdown..."
+                        x-model="sobreDraft.contenido"></textarea>
+            </div>
+            <div class="adm-notepad-footer">
+              <span class="adm-notepad-ok" x-show="sobreDraft.okMsg" x-text="sobreDraft.okMsg"></span>
+              <span class="adm-notepad-err" x-show="sobreDraft.errMsg" x-text="sobreDraft.errMsg"></span>
+              <button class="adm-notepad-save"
+                      :disabled="sobreDraft.saving"
+                      @click="guardarPaginaSlug('sobre-nosotros', sobreDraft)">
+                <span x-show="!sobreDraft.saving">Guardar cambios</span>
+                <span x-show="sobreDraft.saving">Guardando…</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Bloque: Términos y Condiciones ── -->
+          <div class="adm-notepad">
+            <div class="adm-notepad-header">
+              <p class="adm-notepad-header-title">Términos y Condiciones</p>
+              <span class="adm-notepad-md-badge">Markdown</span>
+            </div>
+            <div class="adm-notepad-body">
+              <input class="adm-notepad-title-input"
+                     placeholder="Título de la página..."
+                     x-model="terminosDraft.titulo" />
+              <textarea class="adm-notepad-textarea"
+                        placeholder="# Términos y Condiciones&#10;&#10;Escribí el contenido de la página aquí usando Markdown..."
+                        x-model="terminosDraft.contenido"></textarea>
+            </div>
+            <div class="adm-notepad-footer">
+              <span class="adm-notepad-ok" x-show="terminosDraft.okMsg" x-text="terminosDraft.okMsg"></span>
+              <span class="adm-notepad-err" x-show="terminosDraft.errMsg" x-text="terminosDraft.errMsg"></span>
+              <button class="adm-notepad-save"
+                      :disabled="terminosDraft.saving"
+                      @click="guardarPaginaSlug('terminos', terminosDraft)">
+                <span x-show="!terminosDraft.saving">Guardar cambios</span>
+                <span x-show="terminosDraft.saving">Guardando…</span>
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /adm-notepads-grid -->
+
+        <p class="adm-md-hint">
+          <strong>Formato Markdown:</strong>
+          <code># Título</code> · <code>## Subtítulo</code> · <code>**negrita**</code> ·
+          <code>*cursiva*</code> · <code>- ítem de lista</code> · <code>[texto](url)</code> para links.
+          Los cambios se muestran en el sitio al instante luego de guardar.
+        </p>
+
+        <!-- dummy para que no rompa Alpine (template x-if que se quitó del viejo flow) -->
+        <template x-if="false">
+          <div class="adm-field">
+                <label class="adm-label">
+                  Contenido (Markdown)
+                  <span class="adm-tip" data-tip="Formato Markdown: # Título, ## Subtítulo, **negrita**, *cursiva*, - ítem de lista, [texto](url) para links. Los cambios se previsualizan en tiempo real a la derecha.">?</span>
+                </label>
+                <textarea class="adm-input adm-textarea"
+                          placeholder="# Título&#10;&#10;Escribí el contenido de la página acá..."
+                          x-model="paginaDraft.contenido"></textarea>
+              </div>
+              <div class="adm-field">
+                <label class="adm-label" style="margin-bottom:0.35rem;">
+                  Vista previa
+                </label>
+                <div class="adm-md-preview" x-html="paginaHtml"></div>
+              </div>
+            </div>
+          </div>
         </template>
       </div>
-    </template>
-  </div>
 
-  <!-- Tab Crear Usuario -->
-  <form x-show="tab === 'crear'" @submit.prevent="crearUsuario" class="ios-card p-4 space-y-3">
-    <input class="ios-input" placeholder="Nombre" x-model="nuevoUsuario.nombre" required />
-    <input type="email" class="ios-input" placeholder="Email" x-model="nuevoUsuario.email" required />
-    <input type="password" class="ios-input" placeholder="Contraseña (min. 6)" x-model="nuevoUsuario.password" minlength="6" required />
-    <select class="ios-input" x-model="nuevoUsuario.rol">
-      <option value="cliente">Cliente</option>
-      <option value="vendedor">Vendedor</option>
-      <option value="admin">Admin</option>
-    </select>
-    <input x-show="nuevoUsuario.rol === 'cliente'" class="ios-input" placeholder="DNI"
-           x-model="nuevoUsuario.dni" :required="nuevoUsuario.rol === 'cliente'" />
-    <p class="text-ios-red text-sm" x-show="errMsg" x-text="errMsg"></p>
-    <p class="text-ios-green text-sm font-medium" x-show="okMsg" x-text="okMsg"></p>
-    <button type="submit" class="ios-btn-primary" :disabled="busy">
-      <span x-show="!busy">Crear usuario</span>
-      <span x-show="busy">Creando…</span>
-    </button>
-  </form>
+    </div><!-- /admin-content -->
+  </main>
 </section>

@@ -1,5 +1,12 @@
 /* ==============================
    CATALOG PAGE
+   ==============================
+   PALETA DE COLORES — editá estas variables en cada regla:
+   Naranja principal:  #D4621A
+   Naranja hover:      #B85415
+   Naranja claro (bg): #FEF3E8
+   Borde naranja:      #F5C8A8
+   Fondo tarjeta:      #ffffff
    ============================== */
 
 .catalog-page {
@@ -11,8 +18,8 @@
 
 /* Banner para usuario logueado */
 .catalog-user-banner {
-  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
-  border: 1.5px solid #bbf7d0;
+  background: linear-gradient(135deg, #FEF3E8, #FDF6EE); /* ← gradiente del banner de puntos del usuario */
+  border: 1.5px solid #F5C8A8;  /* ← borde del banner de puntos */
   border-radius: 14px;
   padding: 1rem 1.5rem;
   margin-bottom: 1.75rem;
@@ -25,20 +32,20 @@
 
 .catalog-user-banner p {
   font-size: 0.9rem;
-  color: #374151;
+  color: #374151;               /* ← color del texto en el banner del usuario */
   margin: 0;
 }
 
 .catalog-user-banner .banner-pts {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #3ab56e;
+  color: #D4621A;               /* ← color del número de puntos en el banner */
   line-height: 1;
 }
 
 .catalog-user-banner .banner-pts-label {
   font-size: 0.75rem;
-  color: #3ab56e;
+  color: #D4621A;               /* ← color de la etiqueta "puntos" en el banner */
   font-weight: 600;
   margin-top: 0.15rem;
 }
@@ -51,13 +58,13 @@
 .catalog-title {
   font-size: 1.75rem;
   font-weight: 800;
-  color: #111827;
+  color: #111827;               /* ← color del título del catálogo */
   letter-spacing: -0.5px;
   margin: 0 0 0.25rem;
 }
 
 .catalog-subtitle {
-  color: #6b7280;
+  color: #6b7280;               /* ← color del subtítulo del catálogo */
   font-size: 0.95rem;
   margin: 0;
 }
@@ -71,10 +78,10 @@
 
 /* Product card */
 .product-card {
-  background: #ffffff;
+  background: #ffffff;          /* ← fondo de las tarjetas de producto */
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 2px 12px rgba(180, 70, 10, 0.08); /* ← sombra de las tarjetas */
   display: flex;
   flex-direction: column;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
@@ -82,21 +89,21 @@
 
 .product-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
+  box-shadow: 0 8px 28px rgba(180, 70, 10, 0.14); /* ← sombra hover de las tarjetas */
 }
 
 .product-card-img {
   width: 100%;
   height: 190px;
   object-fit: cover;
-  background: #f9fafb;
+  background: #FEF3E8;          /* ← fondo del área de imagen cuando no hay foto */
   display: block;
 }
 
 .product-card-placeholder {
   width: 100%;
   height: 190px;
-  background: linear-gradient(135deg, #f0fdf4 0%, #f9fafb 100%);
+  background: linear-gradient(135deg, #FEF3E8 0%, #FDF6EE 100%); /* ← gradiente del placeholder de imagen */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -106,7 +113,7 @@
 .product-card-placeholder svg {
   width: 52px;
   height: 52px;
-  color: #86efac;
+  color: #F5C8A8;               /* ← color del ícono en el placeholder de imagen */
 }
 
 /* Card body */
@@ -120,13 +127,13 @@
 .product-card-name {
   font-size: 1rem;
   font-weight: 700;
-  color: #111827;
+  color: #111827;               /* ← color del nombre del producto */
   margin: 0 0 0.35rem;
 }
 
 .product-card-desc {
   font-size: 0.83rem;
-  color: #6b7280;
+  color: #6b7280;               /* ← color de la descripción del producto */
   line-height: 1.5;
   margin: 0 0 1rem;
   flex: 1;
@@ -134,8 +141,8 @@
 
 /* Points info box */
 .product-card-points {
-  background: #f9fafb;
-  border: 1px solid #f3f4f6;
+  background: #FEF3E8;          /* ← fondo del recuadro de puntos en la tarjeta */
+  border: 1px solid #F5C8A8;   /* ← borde del recuadro de puntos */
   border-radius: 10px;
   padding: 0.75rem;
   margin-bottom: 1rem;
@@ -149,24 +156,24 @@
   align-items: center;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #6b7280;               /* ← color del texto descriptivo en el recuadro de puntos */
 }
 
 .product-card-row .cost {
   font-size: 1rem;
   font-weight: 800;
-  color: #111827;
+  color: #3D1A02;               /* ← color del número de puntos requeridos */
 }
 
 .product-card-row .earn {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #3ab56e;
+  color: #D4621A;               /* ← color de los puntos que se acumulan */
 }
 
 .product-card-divider {
   height: 1px;
-  background: #e5e7eb;
+  background: #F5C8A8;          /* ← color del separador dentro del recuadro de puntos */
 }
 
 /* CTA Buttons */
@@ -187,12 +194,12 @@
 }
 
 .product-card-btn-canjear {
-  background: #111827;
-  color: #ffffff;
+  background: #D4621A;          /* ← fondo del botón "Canjear" */
+  color: #ffffff;               /* ← color del texto del botón "Canjear" */
 }
 
 .product-card-btn-canjear:hover {
-  background: #1f2937;
+  background: #B85415;          /* ← fondo hover del botón "Canjear" */
 }
 
 .product-card-btn-canjear:active {
@@ -200,13 +207,13 @@
 }
 
 .product-card-btn-login {
-  background: #f0fdf4;
-  color: #3ab56e;
-  border: 1.5px solid #bbf7d0 !important;
+  background: #FEF3E8;          /* ← fondo del botón "Inicia sesión para canjear" */
+  color: #D4621A;               /* ← color del texto del botón de login */
+  border: 1.5px solid #F5C8A8 !important; /* ← borde del botón de login */
 }
 
 .product-card-btn-login:hover {
-  background: #dcfce7;
+  background: #F5C8A8;          /* ← fondo hover del botón de login */
 }
 
 /* Empty state */
@@ -214,21 +221,21 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 5rem 1rem;
-  color: #9ca3af;
+  color: #C4A882;               /* ← color del estado vacío (sin productos) */
 }
 
 .catalog-empty svg {
   width: 52px;
   height: 52px;
   margin: 0 auto 1rem;
-  color: #d1d5db;
+  color: #F5C8A8;               /* ← color del ícono del estado vacío */
   display: block;
 }
 
 .catalog-empty h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #374151;
+  color: #374151;               /* ← color del título del estado vacío */
   margin: 0 0 0.25rem;
 }
 
@@ -239,7 +246,7 @@
 
 /* Skeleton loading */
 .catalog-skeleton {
-  background: #f3f4f6;
+  background: #F5C8A8;          /* ← color del skeleton de carga */
   border-radius: 8px;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
@@ -247,6 +254,323 @@
 @keyframes skeleton-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+/* ── Categoría badge en la tarjeta ─────────────────────── */
+.product-card-cat {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  background: rgba(61, 26, 2, 0.72);  /* ← fondo del badge de categoría */
+  color: #FEF3E8;                       /* ← color del texto del badge */
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.product-card {
+  position: relative; /* para el badge absoluto */
+}
+
+/* ── Filtros del catálogo ───────────────────────────────── */
+.catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 0.875rem 1.25rem;
+  background: #ffffff;              /* ← fondo del panel de filtros */
+  border: 1px solid #F5C8A8;        /* ← borde del panel de filtros */
+  border-radius: 14px;
+}
+
+/* ── Dropdown de categoría ── */
+.catalog-filter-dropdown {
+  flex-shrink: 0;
+}
+
+.catalog-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1.5px solid #F5C8A8;      /* ← borde del botón de categoría */
+  border-radius: 10px;
+  background: #ffffff;               /* ← fondo del botón de categoría */
+  color: #A08060;                    /* ← color del texto del botón de categoría */
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  min-width: 150px;
+  transition: all 0.15s;
+}
+
+.catalog-dropdown-btn:hover,
+.catalog-dropdown-btn.active {
+  border-color: #D4621A;             /* ← borde activo/hover del botón de categoría */
+  color: #D4621A;                    /* ← color activo/hover del botón de categoría */
+  background: #FEF3E8;               /* ← fondo activo/hover del botón de categoría */
+}
+
+.catalog-dropdown-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  background: #ffffff;              /* ← fondo de la lista desplegable */
+  border: 1.5px solid #F5C8A8;      /* ← borde de la lista desplegable */
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(180, 70, 10, 0.12); /* ← sombra de la lista */
+  min-width: 180px;
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.catalog-dropdown-item {
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;                    /* ← color de los items del dropdown */
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s;
+}
+
+.catalog-dropdown-item:hover {
+  background: #FEF3E8;               /* ← fondo hover de los items del dropdown */
+  color: #D4621A;                    /* ← color hover de los items del dropdown */
+}
+
+.catalog-dropdown-item.active {
+  background: #D4621A;               /* ← fondo del item seleccionado */
+  color: #ffffff;                    /* ← color del item seleccionado */
+  font-weight: 700;
+}
+
+/* ── Range slider de puntos ── */
+.catalog-filter-range {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 180px;
+}
+
+.catalog-filter-range-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.catalog-filter-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #A08060;                    /* ← color de la etiqueta de filtros */
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.catalog-filter-range-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #D4621A;                    /* ← color del valor actual del slider */
+}
+
+/* Range slider naranja */
+.catalog-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: #F5C8A8;              /* ← color de la pista del slider */
+  outline: none;
+  cursor: pointer;
+}
+
+.catalog-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #D4621A;              /* ← color del thumb del slider */
+  cursor: pointer;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(212, 98, 26, 0.4); /* ← sombra del thumb */
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.catalog-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 12px rgba(212, 98, 26, 0.5);
+}
+
+.catalog-range-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #D4621A;              /* ← color del thumb en Firefox */
+  cursor: pointer;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(212, 98, 26, 0.4);
+}
+
+.catalog-filter-clear {
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1.5px solid #F5C8A8;      /* ← borde del botón "Limpiar" */
+  background: none;
+  color: #A08060;                    /* ← color del botón "Limpiar" */
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.catalog-filter-clear:hover {
+  background: #FEF3E8;               /* ← fondo hover del botón "Limpiar" */
+  color: #D4621A;                    /* ← color hover del botón "Limpiar" */
+  border-color: #D4621A;
+}
+
+@media (max-width: 639px) {
+  .catalog-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .catalog-filter-range {
+    min-width: unset;
+  }
+}
+
+/* ==============================
+   PÁGINAS ESTÁTICAS (Sobre Nosotros, Términos)
+   ============================== */
+.pagina-page {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  /* ← gradiente de fondo de las páginas informativas (segunda imagen) */
+  background: radial-gradient(ellipse at 35% 35%, #FEF0DC 0%, #F5C49A 55%, #D4884A 100%);
+  background-attachment: fixed;
+  padding: 3rem 1.25rem 5rem;
+  box-sizing: border-box;
+}
+
+.pagina-card {
+  background: #ffffff;              /* ← fondo de la tarjeta de contenido */
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(180, 70, 10, 0.18); /* ← sombra de la tarjeta */
+  width: 100%;
+  max-width: 760px;
+  padding: 2.5rem 2.5rem 3rem;
+  box-sizing: border-box;
+}
+
+.pagina-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #3D1A02;                   /* ← color del título de la página */
+  letter-spacing: -0.5px;
+  margin: 0 0 1.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #F5C8A8; /* ← línea bajo el título */
+}
+
+/* ── Estilos del contenido markdown renderizado ── */
+.markdown-body {
+  color: #374151;                   /* ← color del texto del cuerpo */
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.markdown-body h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #3D1A02;                   /* ← color de los H1 en el markdown */
+  margin: 1.5rem 0 0.75rem;
+  letter-spacing: -0.3px;
+}
+
+.markdown-body h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #D4621A;                   /* ← color de los H2 en el markdown */
+  margin: 1.75rem 0 0.6rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #F5C8A8;
+}
+
+.markdown-body h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #3D1A02;                   /* ← color de los H3 en el markdown */
+  margin: 1.25rem 0 0.4rem;
+}
+
+.markdown-body p {
+  margin: 0 0 1rem;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 1rem 1.5rem;
+  padding: 0;
+}
+
+.markdown-body li {
+  margin-bottom: 0.35rem;
+}
+
+.markdown-body strong {
+  color: #3D1A02;                   /* ← color del texto en negrita en el markdown */
+  font-weight: 700;
+}
+
+.markdown-body a {
+  color: #D4621A;                   /* ← color de los links en el markdown */
+  text-decoration: underline;
+  text-decoration-color: #F5C8A8;
+}
+
+.markdown-body a:hover {
+  color: #B85415;
+}
+
+.markdown-body em {
+  color: #A08060;                   /* ← color del texto en cursiva */
+}
+
+.markdown-body code {
+  background: #FEF3E8;              /* ← fondo del código inline */
+  color: #D4621A;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid #F5C8A8;   /* ← color del separador horizontal */
+  margin: 1.5rem 0;
 }
 
 /* ==============================

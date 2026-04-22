@@ -1,8 +1,30 @@
+import path from "path";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { pool, qOne, qAll, qRun } from "../db";
 import { requireAuth, requireRole } from "../auth";
+
+// ── Configuración de multer para subida de imágenes ──────
+const storage = multer.diskStorage({
+  destination: path.join(__dirname, "../../uploads"),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${uuidv4()}-${Date.now()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máx
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Solo se permiten imágenes JPG, PNG o WEBP"));
+  },
+});
 
 const router = Router();
 router.use(requireAuth, requireRole("admin"));
@@ -266,6 +288,13 @@ router.get("/productos", async (_req, res) => {
   res.json(rows);
 });
 
+// POST /admin/productos/upload — recibe imagen y devuelve la URL pública
+router.post("/productos/upload", upload.single("imagen"), (req, res) => {
+  if (!req.file) { res.status(400).json({ error: "No se recibió ningún archivo" }); return; }
+  const url = `/uploads/${req.file.filename}`;
+  res.json({ url });
+});
+
 router.post("/productos", async (req, res) => {
   const schema = z.object({
     nombre:             z.string().min(1).max(150),
@@ -317,6 +346,60 @@ router.patch("/productos/:id/activo", async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════
+//  CATEGORÍAS (ABM)
+// ════════════════════════════════════════════════════════
+
+router.get("/categorias", async (_req, res) => {
+  const rows = await qAll(pool, "SELECT id, nombre, descripcion, created_at FROM categorias ORDER BY nombre ASC");
+  res.json(rows);
+});
+
+router.post("/categorias", async (req, res) => {
+  const schema = z.object({
+    nombre:      z.string().min(1).max(100),
+    descripcion: z.string().max(1000).optional().nullable(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
+  const { nombre, descripcion } = parsed.data;
+
+  try {
+    const { insertId } = await qRun(pool, "INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)", [nombre, descripcion ?? null]);
+    res.status(201).json({ id: insertId });
+  } catch (err: any) {
+    if (err.code === "ER_DUP_ENTRY") { res.status(409).json({ error: "Ya existe una categoría con ese nombre" }); return; }
+    throw err;
+  }
+});
+
+router.put("/categorias/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const schema = z.object({
+    nombre:      z.string().min(1).max(100),
+    descripcion: z.string().max(1000).optional().nullable(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
+  const { nombre, descripcion } = parsed.data;
+
+  try {
+    const { affectedRows } = await qRun(pool, "UPDATE categorias SET nombre=?, descripcion=? WHERE id=?", [nombre, descripcion ?? null, id]);
+    if (affectedRows === 0) { res.status(404).json({ error: "Categoría no encontrada" }); return; }
+    res.json({ ok: true });
+  } catch (err: any) {
+    if (err.code === "ER_DUP_ENTRY") { res.status(409).json({ error: "Ya existe otra categoría con ese nombre" }); return; }
+    throw err;
+  }
+});
+
+router.delete("/categorias/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { affectedRows } = await qRun(pool, "DELETE FROM categorias WHERE id=?", [id]);
+  if (affectedRows === 0) { res.status(404).json({ error: "Categoría no encontrada" }); return; }
+  res.json({ ok: true });
+});
+
+// ════════════════════════════════════════════════════════
 //  CONFIGURACIÓN
 // ════════════════════════════════════════════════════════
 
@@ -330,6 +413,41 @@ router.put("/configuracion/:clave", async (req, res) => {
   const { valor } = req.body;
   if (valor === undefined || valor === null) { res.status(400).json({ error: "valor requerido" }); return; }
   await qRun(pool, "UPDATE configuracion SET valor = ? WHERE clave = ?", [String(valor), clave]);
+  res.json({ ok: true });
+});
+
+// ════════════════════════════════════════════════════════
+//  PÁGINAS DE CONTENIDO (Sobre Nosotros, Términos, etc.)
+// ════════════════════════════════════════════════════════
+
+router.get("/paginas", async (_req, res) => {
+  const rows = await qAll(pool, "SELECT slug, titulo, updated_at FROM paginas_contenido");
+  res.json(rows);
+});
+
+router.get("/paginas/:slug", async (req, res) => {
+  const page = await qOne(pool,
+    "SELECT slug, titulo, contenido, updated_at FROM paginas_contenido WHERE slug = ?",
+    [req.params.slug]
+  );
+  if (!page) { res.status(404).json({ error: "Página no encontrada" }); return; }
+  res.json(page);
+});
+
+router.put("/paginas/:slug", async (req, res) => {
+  const schema = z.object({
+    titulo:    z.string().min(1).max(200),
+    contenido: z.string().min(1),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
+
+  const { titulo, contenido } = parsed.data;
+  const { affectedRows } = await qRun(pool,
+    "UPDATE paginas_contenido SET titulo = ?, contenido = ? WHERE slug = ?",
+    [titulo, contenido, req.params.slug]
+  );
+  if (affectedRows === 0) { res.status(404).json({ error: "Página no encontrada" }); return; }
   res.json({ ok: true });
 });
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#D4621A" /><!-- ← color del navbar en móvil (barra de estado del navegador) -->
     <title>Ñandé — Puntos Premium</title>
   </head>
   <body>
@@ -23,6 +23,8 @@
 
           <div class="navbar-links">
             <a href="#/" class="navbar-link" :class="$store.router.current === '/' ? 'active' : ''">Catálogo</a>
+            <a href="#/sobre-nosotros" class="navbar-link" :class="$store.router.current === '/sobre-nosotros' ? 'active' : ''">Quiénes Somos</a>
+            <a href="#/terminos" class="navbar-link" :class="$store.router.current === '/terminos' ? 'active' : ''">Términos</a>
             <a href="#/cliente" class="navbar-link"
                x-show="$store.auth.user?.rol === 'cliente'"
                :class="$store.router.current === '/cliente' ? 'active' : ''">Mis Puntos</a>
@@ -37,7 +39,7 @@
           <div class="navbar-auth">
             <template x-if="$store.auth.user">
               <div class="navbar-user">
-                <span class="navbar-points" x-text="($store.auth.user.puntos_saldo ?? 0) + ' pts'"></span>
+                <span class="navbar-points" x-show="$store.auth.user.rol === 'cliente'" x-text="($store.auth.user.puntos_saldo ?? 0) + ' pts'"></span>
                 <span class="navbar-name" x-text="$store.auth.user.nombre"></span>
                 <button class="navbar-logout" @click="$store.auth.logout()">Salir</button>
               </div>
@@ -58,6 +60,8 @@
 
       <div class="navbar-mobile" x-show="menuOpen" x-transition>
         <a href="#/" class="navbar-link" :class="$store.router.current === '/' ? 'active' : ''" @click="menuOpen = false">Catálogo</a>
+        <a href="#/sobre-nosotros" class="navbar-link" :class="$store.router.current === '/sobre-nosotros' ? 'active' : ''" @click="menuOpen = false">Quiénes Somos</a>
+        <a href="#/terminos" class="navbar-link" :class="$store.router.current === '/terminos' ? 'active' : ''" @click="menuOpen = false">Términos</a>
         <a href="#/cliente" class="navbar-link" x-show="$store.auth.user?.rol === 'cliente'" :class="$store.router.current === '/cliente' ? 'active' : ''" @click="menuOpen = false">Mis Puntos</a>
         <a href="#/vendedor" class="navbar-link" x-show="$store.auth.user?.rol === 'vendedor' || $store.auth.user?.rol === 'admin'" :class="$store.router.current === '/vendedor' ? 'active' : ''" @click="menuOpen = false">Cargar Puntos</a>
         <a href="#/admin" class="navbar-link" x-show="$store.auth.user?.rol === 'admin'" :class="$store.router.current === '/admin' ? 'active' : ''" @click="menuOpen = false">Panel Admin</a>
@@ -67,7 +71,7 @@
             <div class="navbar-mobile-user">
               <div>
                 <span class="navbar-name" x-text="$store.auth.user.nombre"></span>
-                <span class="navbar-points" style="margin-left:0.5rem" x-text="($store.auth.user.puntos_saldo ?? 0) + ' pts'"></span>
+                <span class="navbar-points" style="margin-left:0.5rem" x-show="$store.auth.user.rol === 'cliente'" x-text="($store.auth.user.puntos_saldo ?? 0) + ' pts'"></span>
               </div>
               <button class="navbar-logout" @click="$store.auth.logout(); menuOpen = false">Salir</button>
             </div>
@@ -104,6 +108,8 @@
           <a href="#/registro" class="footer-link" x-show="!$store.auth.user">Registrarse</a>
           <a href="#/cliente" class="footer-link" x-show="$store.auth.user?.rol === 'cliente'">Mis Puntos</a>
           <a href="#/admin" class="footer-link" x-show="$store.auth.user?.rol === 'admin'">Panel Admin</a>
+          <a href="#/sobre-nosotros" class="footer-link">Sobre Nosotros</a>
+          <a href="#/terminos" class="footer-link">Términos</a>
         </nav>
 
         <div class="footer-col footer-col-right">

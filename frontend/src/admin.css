@@ -1,0 +1,655 @@
+/* ════════════════════════════════════════════════════════
+   ADMIN PANEL — TEMA CLARO CÁLIDO
+   Paleta:
+     bg-page:    #FEF0DC   ← fondo general (beige naranjoso)
+     bg-sidebar: #F5DDB5   ← fondo del sidebar (beige dorado)
+     bg-card:    #FFFFFF   ← fondo de las tarjetas
+     bg-card-alt:#FFF8F0   ← tarjeta alternativa tenue
+     accent:     #D4621A   ← naranja principal
+     accent-dk:  #B85415   ← naranja oscuro (hover)
+     text:       #2D1200   ← texto principal (marrón oscuro)
+     muted:      #8B5A30   ← texto secundario
+     border:     rgba(180,84,20,0.2) ← bordes
+     danger:     #dc2626   ← rojo
+     success:    #16a34a   ← verde
+   ════════════════════════════════════════════════════════ */
+
+/* ── Layout base ── */
+.admin-layout {
+  display: flex;
+  min-height: calc(100vh - 64px);
+  background: #FEF0DC;          /* ← fondo principal del panel */
+  width: 100%;
+  font-family: inherit;
+  color: #2D1200;               /* ← color de texto general */
+}
+
+/* ════ SIDEBAR ════ */
+.admin-sidebar {
+  width: 230px;
+  flex-shrink: 0;
+  background: #F5DDB5;          /* ← fondo del sidebar */
+  border-right: 2px solid rgba(180,84,20,0.18); /* ← borde separador */
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-brand {
+  padding: 1.4rem 1.25rem 1.1rem;
+  border-bottom: 1px solid rgba(180,84,20,0.18);
+}
+
+.admin-brand-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2D1200;               /* ← nombre del admin en sidebar */
+  margin: 0;
+}
+
+.admin-brand-role {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8B5A30;               /* ← texto del rol */
+  margin: 0.2rem 0 0;
+}
+
+/* Nav */
+.admin-nav {
+  padding: 0.65rem 0.65rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.admin-nav-section {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #B87840;               /* ← etiqueta de sección sidebar */
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.9rem 0.5rem 0.3rem;
+}
+
+.admin-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #5C2D0E;               /* ← color de los items del menú */
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-align: left;
+}
+
+.admin-nav-btn svg { flex-shrink: 0; opacity: 0.6; transition: opacity 0.15s; }
+
+.admin-nav-btn:hover {
+  background: rgba(180,84,20,0.12); /* ← fondo hover item menú */
+  color: #2D1200;
+}
+.admin-nav-btn:hover svg { opacity: 1; }
+
+.admin-nav-btn.active {
+  background: #D4621A;          /* ← fondo item activo */
+  color: #ffffff;               /* ← texto item activo */
+  font-weight: 600;
+}
+.admin-nav-btn.active svg { opacity: 1; color: #ffffff; }
+
+/* ════ MAIN ════ */
+.admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-topbar {
+  padding: 1.4rem 2rem 1.1rem;
+  border-bottom: 1px solid rgba(180,84,20,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #FEE8C0;          /* ← fondo topbar (levemente más oscuro) */
+}
+
+.admin-topbar-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #2D1200;               /* ← título "Hola, Admin" */
+  margin: 0;
+  line-height: 1.2;
+}
+
+.admin-topbar-sub {
+  font-size: 0.8rem;
+  color: #8B5A30;               /* ← subtítulo topbar */
+  margin: 0.2rem 0 0;
+}
+
+.admin-topbar-date {
+  font-size: 0.78rem;
+  color: #8B5A30;               /* ← fecha en topbar */
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.admin-content {
+  padding: 1.75rem 2rem 3rem;
+  flex: 1;
+  overflow-y: auto;
+  background: #FEF0DC;          /* ← fondo del área de contenido */
+}
+
+/* ── Stats ── */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.admin-stat-card {
+  background: #FFFFFF;          /* ← fondo tarjeta stats */
+  border: 1px solid rgba(180,84,20,0.18);
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem 1rem;
+  box-shadow: 0 2px 8px rgba(180,84,20,0.07);
+}
+
+.admin-stat-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #8B5A30;               /* ← etiqueta de la stat */
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 0.5rem;
+}
+
+.admin-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2D1200;               /* ← valor de la stat */
+  margin: 0;
+  line-height: 1;
+}
+
+.admin-stat-value.accent { color: #D4621A; } /* ← stat en naranja (canjes pendientes) */
+
+/* ── Section headers ── */
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.admin-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2D1200;               /* ← título de cada sección */
+  margin: 0;
+}
+
+/* ── Cards ── */
+.admin-card {
+  background: #FFFFFF;          /* ← fondo de tarjetas */
+  border: 1px solid rgba(180,84,20,0.18);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(180,84,20,0.07);
+}
+
+.admin-card-padded { padding: 1.25rem 1.5rem; }
+
+/* ── TABLA ── */
+.admin-table-wrap { overflow-x: auto; }
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #8B5A30;               /* ← encabezado de columna */
+  border-bottom: 1px solid rgba(180,84,20,0.18);
+  white-space: nowrap;
+  background: #FFF8F0;          /* ← fondo encabezado tabla */
+}
+
+.admin-table td {
+  padding: 0.85rem 1rem;
+  color: #2D1200;               /* ← texto de las celdas */
+  border-bottom: 1px solid rgba(180,84,20,0.08);
+  vertical-align: middle;
+}
+
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: #FFF5EC; } /* ← hover sobre fila */
+
+/* ── Badges ── */
+.adm-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.adm-badge-active   { background: #dcfce7; color: #16a34a; }
+.adm-badge-inactive { background: #fee2e2; color: #dc2626; }
+.adm-badge-admin    { background: #fde8d8; color: #c2410c; }
+.adm-badge-vendedor { background: #fef3c7; color: #92400e; }
+.adm-badge-cliente  { background: #dbeafe; color: #1d4ed8; }
+.adm-badge-neutral  { background: #f0f0f0; color: #6b7280; }
+
+/* ── Feedback ── */
+.adm-msg-ok {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;               /* ← texto éxito */
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.adm-msg-err {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;               /* ← texto error */
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ── Formularios ── */
+.adm-field { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.adm-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #5C2D0E;               /* ← etiqueta de los campos */
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.adm-input {
+  background: #FFF8F0;          /* ← fondo de los inputs */
+  border: 1.5px solid rgba(180,84,20,0.3);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  color: #2D1200;               /* ← texto de los inputs */
+  font-size: 0.875rem;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.adm-input:focus { border-color: #D4621A; }
+.adm-input::placeholder { color: #C4956A; }
+.adm-input option { background: #FFF8F0; color: #2D1200; }
+
+.adm-textarea {
+  resize: vertical;
+  min-height: 200px;
+  font-family: 'Courier New', 'Fira Code', monospace;
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+
+.adm-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+
+/* ── TOOLTIP ── */
+.adm-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(212,98,26,0.15); /* ← fondo del badge "?" */
+  color: #D4621A;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: help;
+  position: relative;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.adm-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2D1200;          /* ← fondo del tooltip flotante */
+  color: #FEF0DC;               /* ← texto del tooltip flotante */
+  padding: 9px 13px;
+  border-radius: 9px;
+  font-size: 11px;
+  width: 220px;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 9999;
+  border: 1px solid rgba(212,98,26,0.3);
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+}
+.adm-tip:hover::after { opacity: 1; }
+
+/* ── BOTONES ── */
+.adm-btn-primary {
+  background: #D4621A;          /* ← fondo botón naranja */
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  width: 100%;
+}
+.adm-btn-primary:hover    { background: #B85415; }
+.adm-btn-primary:disabled { opacity: 0.6; cursor: default; }
+
+.adm-btn-secondary {
+  background: #FEF0DC;          /* ← fondo botón secundario */
+  color: #D4621A;
+  border: 1.5px solid rgba(180,84,20,0.3);
+  border-radius: 10px;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  flex: 1;
+}
+.adm-btn-secondary:hover { background: #F5DDB5; }
+
+.adm-btn-danger {
+  background: none; border: none;
+  color: #dc2626;               /* ← botón desactivar / acción destructiva */
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; padding: 0.3rem 0.65rem;
+  border-radius: 6px; transition: background 0.15s;
+}
+.adm-btn-danger:hover { background: #fee2e2; }
+
+.adm-btn-success {
+  background: none; border: none;
+  color: #16a34a;               /* ← botón activar */
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; padding: 0.3rem 0.65rem;
+  border-radius: 6px; transition: background 0.15s;
+}
+.adm-btn-success:hover { background: #dcfce7; }
+
+.adm-btn-link {
+  background: none; border: none;
+  color: #D4621A;               /* ← botones tipo "link" (Editar, Ver todos) */
+  font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; padding: 0.3rem 0.65rem;
+  border-radius: 6px; transition: background 0.15s;
+}
+.adm-btn-link:hover { background: rgba(212,98,26,0.1); }
+
+/* ── Puntos ── */
+.adm-pts-pos { color: #D4621A; font-weight: 700; }
+.adm-pts-neg { color: #dc2626; font-weight: 700; }
+
+/* ── Estado vacío ── */
+.adm-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #B87840;               /* ← texto cuando no hay datos */
+  font-size: 0.875rem;
+}
+
+/* ── Subida de imagen ── */
+.adm-upload {
+  border: 2px dashed rgba(180,84,20,0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  color: #8B5A30;
+  background: #FFF8F0;
+}
+.adm-upload:hover {
+  border-color: #D4621A;
+  background: #FEF0DC;
+}
+
+/* ── Code chip ── */
+.adm-code-chip {
+  background: #FDE8D8;          /* ← fondo del chip de código */
+  border: 1px solid rgba(180,84,20,0.3);
+  color: #B85415;               /* ← texto del chip de código */
+  padding: 0.2rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  font-family: monospace;
+}
+
+/* ── Producto row ── */
+.adm-product-row {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(180,84,20,0.08);
+}
+.adm-product-row:last-child { border-bottom: none; }
+
+/* ══════════════════════════════════════
+   BLOQUE DE NOTAS (Páginas Web)
+   ══════════════════════════════════════ */
+.adm-notepads-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.adm-notepad {
+  background: #FFFFFF;          /* ← fondo del bloque de notas */
+  border: 1px solid rgba(180,84,20,0.2);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(180,84,20,0.1);
+}
+
+.adm-notepad-header {
+  background: #D4621A;          /* ← encabezado naranja del notepad */
+  color: #ffffff;
+  padding: 0.9rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.adm-notepad-header-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0;
+  color: #ffffff;
+}
+
+.adm-notepad-md-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: rgba(255,255,255,0.22); /* ← fondo del badge "Markdown" */
+  color: rgba(255,255,255,0.9);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.adm-notepad-body {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.adm-notepad-title-input {
+  background: #FFF8F0;
+  border: 1.5px solid rgba(180,84,20,0.25);
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  color: #2D1200;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.adm-notepad-title-input:focus    { border-color: #D4621A; }
+.adm-notepad-title-input::placeholder { color: #C4956A; }
+
+.adm-notepad-textarea {
+  background: #FFFBF7;          /* ← fondo del área de escritura */
+  border: 1.5px solid rgba(180,84,20,0.2);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  color: #2D1200;               /* ← texto del área de escritura */
+  font-size: 0.85rem;
+  font-family: 'Courier New', 'Fira Code', monospace;
+  line-height: 1.7;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 320px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.adm-notepad-textarea:focus    { border-color: #D4621A; }
+.adm-notepad-textarea::placeholder { color: #C4956A; }
+
+.adm-notepad-footer {
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid rgba(180,84,20,0.12); /* ← borde superior del footer */
+  background: #FFF8F0;          /* ← fondo del footer del notepad */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.adm-notepad-ok {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #16a34a;               /* ← texto "¡Guardado!" */
+  flex: 1;
+}
+
+.adm-notepad-err {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #dc2626;               /* ← texto de error al guardar */
+  flex: 1;
+}
+
+.adm-notepad-save {
+  background: #D4621A;          /* ← botón guardar del notepad */
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.adm-notepad-save:hover    { background: #B85415; }
+.adm-notepad-save:disabled { opacity: 0.6; cursor: default; }
+
+.adm-md-hint {
+  font-size: 0.78rem;
+  color: #8B5A30;               /* ← texto de ayuda Markdown debajo de los notepads */
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  background: rgba(212,98,26,0.06);
+  border-radius: 10px;
+  border-left: 3px solid #D4621A;
+}
+
+/* ── Scrollbar ── */
+.admin-sidebar::-webkit-scrollbar,
+.admin-content::-webkit-scrollbar { width: 5px; }
+.admin-sidebar::-webkit-scrollbar-thumb,
+.admin-content::-webkit-scrollbar-thumb { background: rgba(180,84,20,0.2); border-radius: 4px; }
+
+/* ════ RESPONSIVE ════ */
+@media (max-width: 1100px) {
+  .admin-stats         { grid-template-columns: repeat(2, 1fr); }
+  .adm-notepads-grid   { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  .admin-sidebar { width: 60px; }
+  .admin-nav-btn span { display: none; }
+  .admin-brand-name, .admin-brand-role, .admin-nav-section { display: none; }
+  .admin-nav-btn { justify-content: center; padding: 0.65rem; }
+}
+
+@media (max-width: 640px) {
+  .admin-layout  { flex-direction: column; }
+  .admin-sidebar { width: 100%; height: auto; position: static; }
+  .admin-nav     { flex-direction: row; flex-wrap: nowrap; padding: 0.5rem; overflow-x: auto; gap: 0.2rem; }
+  .admin-nav-btn span { display: none; }
+  .admin-nav-btn { padding: 0.6rem 0.75rem; justify-content: center; flex-shrink: 0; }
+  .admin-nav-section { display: none; }
+  .admin-brand   { padding: 0.75rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: none; border-right: 1px solid rgba(180,84,20,0.18); flex-shrink: 0; }
+  .admin-brand-role  { display: none; }
+  .admin-content { padding: 1rem; }
+  .admin-topbar  { padding: 1rem; flex-direction: column; align-items: flex-start; }
+  .admin-topbar-date { display: none; }
+  .admin-stats   { grid-template-columns: repeat(2, 1fr); }
+  .adm-form-grid { grid-template-columns: 1fr; }
+  .adm-notepads-grid { grid-template-columns: 1fr; }
+}

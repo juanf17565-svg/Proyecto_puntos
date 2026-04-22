@@ -7,6 +7,7 @@ export const pool = mysql.createPool({
   database: process.env.MYSQL_DATABASE || "nande_puntos",
   user:     process.env.MYSQL_USER     || "nande_user",
   password: process.env.MYSQL_PASSWORD || "nande_password",
+  charset:  "utf8mb4",          /* ← codificación para tildes y ñ */
   waitForConnections: true,
   connectionLimit: 10,
   timezone: "Z",

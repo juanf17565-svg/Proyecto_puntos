@@ -6,20 +6,38 @@
 
   <p class="ios-label">Cliente</p>
   <div class="ios-card p-4 space-y-3">
-    <div class="flex gap-2">
-      <input class="ios-input" placeholder="DNI del cliente" x-model="dni"
-             @keydown.enter.prevent="buscar" inputmode="numeric" />
-      <button type="button"
-              class="px-4 rounded-xl bg-ios-gray5 text-ios-blue font-medium text-sm"
-              @click="buscar">Buscar</button>
+    <div style="position:relative">
+      <input class="ios-input" placeholder="Nombre o DNI del cliente..." x-model="queryCliente"
+             @input.debounce.300ms="buscarClientesRealTime()"
+             @keydown.escape="resultadosClientes = []" />
+
+      <!-- Recomendaciones en tiempo real -->
+      <div x-show="resultadosClientes.length > 0"
+           class="ios-card"
+           style="position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:50; max-height:200px; overflow-y:auto; box-shadow: 0 8px 25px rgba(0,0,0,0.15); border:1px solid #F0DBC5;">
+        <template x-for="u in resultadosClientes" :key="u.id">
+          <button type="button"
+                  @click="seleccionarCliente(u)"
+                  class="w-full text-left p-4 hover:bg-[#FEF3E8] active:bg-[#F5E6D3] border-b border-[#F0DBC5] last:border-0 flex flex-col transition">
+            <span class="font-semibold text-sm" style="color: #3D1A02;" x-text="u.nombre"></span>
+            <span class="text-xs" style="color: #A08060;" x-text="'DNI: ' + u.dni + ' · ' + u.puntos + ' pts'"></span>
+          </button>
+        </template>
+      </div>
     </div>
+
     <template x-if="cliente">
-      <div class="rounded-xl bg-ios-bg p-3">
-        <p class="text-base font-medium" x-text="cliente.nombre"></p>
-        <p class="text-xs text-ios-secondary">
-          DNI <span x-text="cliente.dni"></span> ·
-          <span x-text="cliente.puntos"></span> puntos actuales
-        </p>
+      <div class="rounded-xl bg-[#FEF3E8] p-4 border border-[#F5C8A8]">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-base font-bold" style="color: #D4621A;" x-text="cliente.nombre"></p>
+            <p class="text-xs" style="color: #A08060;">
+              DNI <span x-text="cliente.dni"></span> ·
+              <span class="font-bold" style="color: #D4621A;" x-text="cliente.puntos"></span> puntos disponibles
+            </p>
+          </div>
+          <button @click="cliente = null; queryCliente = ''" class="bg-white px-3 py-1.5 rounded-lg text-[#D4621A] text-xs font-bold border border-[#F5C8A8] shadow-sm">Cambiar</button>
+        </div>
       </div>
     </template>
   </div>
@@ -32,15 +50,14 @@
     </template>
     <template x-for="p in productosFiltrados" :key="p.id">
       <button type="button" @click="add(p)"
-              class="w-full text-left ios-row hover:bg-ios-gray6 active:bg-ios-gray5 transition">
+              class="w-full text-left ios-row hover:bg-[#FEF3E8] active:bg-[#F5E6D3] transition">
         <div class="min-w-0">
           <p class="text-base font-medium truncate" x-text="p.nombre"></p>
-          <p class="text-xs text-ios-secondary">
-            $<span x-text="formatMoney(p.precio)"></span>
-            · <span x-text="p.puntos_por_unidad"></span> pts c/u
+          <p class="text-xs" style="color: #A08060;">
+            +<span x-text="p.puntos_acumulables || 0"></span> pts c/u
           </p>
         </div>
-        <span class="text-ios-blue text-xl leading-none">+</span>
+        <span class="text-[#D4621A] text-xl leading-none">+</span>
       </button>
     </template>
   </div>
@@ -54,8 +71,7 @@
             <div class="min-w-0">
               <p class="text-base font-medium truncate" x-text="it.nombre"></p>
               <p class="text-xs text-ios-secondary">
-                $<span x-text="formatMoney(it.subtotal_precio)"></span>
-                · +<span x-text="it.subtotal_puntos"></span> pts
+                +<span x-text="it.subtotal_puntos"></span> pts
               </p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
@@ -68,8 +84,7 @@
       </div>
       <div class="ios-card mt-3 p-4 flex items-center justify-between">
         <div>
-          <p class="text-xs text-ios-secondary">Total</p>
-          <p class="text-xl font-bold">$<span x-text="formatMoney(totalMonto)"></span></p>
+          <p class="text-xs text-ios-secondary">Puntos Totales a Cargar</p>
         </div>
         <div class="text-right">
           <p class="text-xs text-ios-secondary">Puntos</p>

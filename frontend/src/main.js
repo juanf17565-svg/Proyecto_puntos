@@ -1,27 +1,44 @@
 import Alpine from "alpinejs";
+import { marked } from "marked";
 import { api } from "./api.js";
 import "./styles.css";
 import "./login.css";
 import "./layout.css";
 import "./catalog.css";
+import "./admin.css";
 
 // ── Importar vistas como HTML crudo ──────────────────────────────
-import catalogHtml  from "./views/catalog.html?raw";
-import loginHtml    from "./views/login.html?raw";
-import registroHtml from "./views/registro.html?raw";
-import clienteHtml  from "./views/cliente.html?raw";
-import vendedorHtml from "./views/vendedor.html?raw";
-import adminHtml    from "./views/admin.html?raw";
+import catalogHtml       from "./views/catalog.html?raw";
+import loginHtml         from "./views/login.html?raw";
+import registroHtml      from "./views/registro.html?raw";
+import clienteHtml       from "./views/cliente.html?raw";
+import vendedorHtml      from "./views/vendedor.html?raw";
+import adminHtml         from "./views/admin.html?raw";
+import sobreNosotrosHtml from "./views/sobre-nosotros.html?raw";
+import terminosHtml      from "./views/terminos.html?raw";
 
 // Inyectar todas las vistas en el contenedor (síncrono, antes de Alpine)
 const outlet = document.getElementById("views-outlet");
 if (outlet) {
   outlet.innerHTML =
-    catalogHtml + loginHtml + registroHtml + clienteHtml + vendedorHtml + adminHtml;
+    catalogHtml + loginHtml + registroHtml + clienteHtml +
+    vendedorHtml + adminHtml + sobreNosotrosHtml + terminosHtml;
 }
 
-
 window.Alpine = Alpine;
+
+// ── Configurar marked (markdown renderer) ─────────────────────────
+marked.setOptions({ breaks: true, gfm: true });
+
+// ── Decodificar JWT payload (sin verificar firma — solo para UI) ───
+function getTokenExpiry() {
+  const t = localStorage.getItem("token");
+  if (!t) return null;
+  try {
+    const payload = JSON.parse(atob(t.split(".")[1]));
+    return payload.exp ? payload.exp * 1000 : null;
+  } catch { return null; }
+}
 
 Alpine.store("auth", {
   user: JSON.parse(localStorage.getItem("user") || "null"),
@@ -45,6 +62,7 @@ Alpine.store("auth", {
     try {
       const { token, user } = await api.post("/auth/login", { email, password });
       this.persist(user, token);
+      scheduleSessionExpiry();
       navigate(defaultRouteFor(user.rol));
     } catch (e) {
       this.error = e.message;
@@ -59,6 +77,7 @@ Alpine.store("auth", {
     try {
       const { token, user } = await api.post("/auth/register", data);
       this.persist(user, token);
+      scheduleSessionExpiry();
       navigate("/cliente");
     } catch (e) {
       this.error = e.message;
@@ -93,12 +112,33 @@ function navigate(path) {
   else applyRoute();
 }
 
+// ── Sesión: auto-logout cuando expira el JWT ──────────────────────
+let sessionTimer = null;
+function scheduleSessionExpiry() {
+  if (sessionTimer) clearTimeout(sessionTimer);
+  const exp = getTokenExpiry();
+  if (!exp) return;
+  const ms = exp - Date.now();
+  if (ms <= 0) {
+    Alpine.store("auth").logout();
+    return;
+  }
+  sessionTimer = setTimeout(() => {
+    Alpine.store("auth").logout();
+    alert("Tu sesión expiró. Iniciá sesión nuevamente.");
+  }, ms);
+}
+
+// Verificar token al cargar si ya había sesión
+if (Alpine.store("auth").user) scheduleSessionExpiry();
+
 function applyRoute() {
   const path = parseHash();
   const user = Alpine.store("auth").user;
 
-  // "/" (catálogo) es siempre público
-  if (path === "/") {
+  // Rutas públicas sin autenticación
+  const publicRoutes = ["/", "/sobre-nosotros", "/terminos"];
+  if (publicRoutes.includes(path)) {
     Alpine.store("router").current = path;
     return;
   }
@@ -176,52 +216,131 @@ Alpine.data("registroForm", () => ({
 
 Alpine.data("catalogView", () => ({
   productos: [],
+  categorias: [],
+  categoriaActiva: "",
+  maxPuntos: 0,
+  puntosMax: 1000,
   loading: true,
+
   async init() {
     try {
-      this.productos = await api.get("/productos");
+      const [prods, cats] = await Promise.all([
+        api.get("/productos"),
+        api.get("/productos/categorias"),
+      ]);
+      this.productos = prods;
+      this.categorias = cats;
+      // Calcular el máximo de puntos para el slider
+      if (prods.length) {
+        this.puntosMax = Math.max(...prods.map(p => p.puntos_requeridos));
+        // Redondear arriba al siguiente multiplo de 50
+        this.puntosMax = Math.ceil(this.puntosMax / 50) * 50;
+      }
+      this.maxPuntos = this.puntosMax; // slider arranca en el máximo (sin filtrar)
     } catch {
       this.productos = [];
     } finally {
       this.loading = false;
     }
   },
+
+  get productosFiltrados() {
+    return this.productos.filter(p => {
+      const matchCat = !this.categoriaActiva || p.categoria === this.categoriaActiva;
+      const matchPts = Number(this.maxPuntos) >= this.puntosMax || p.puntos_requeridos <= Number(this.maxPuntos);
+      return matchCat && matchPts;
+    });
+  },
+
+  limpiarFiltros() {
+    this.categoriaActiva = "";
+    this.maxPuntos = this.puntosMax;
+  },
+
   async canjear(producto) {
     if (!Alpine.store("auth").user) {
       navigate("/login");
       return;
     }
-    navigate("/cliente");
+    if (!confirm(`¿Querés canjear ${producto.puntos_requeridos} puntos por ${producto.nombre}?`)) return;
+    try {
+      const resp = await api.post("/cliente/canjear-producto", { producto_id: producto.id });
+      alert(`¡Canje exitoso! Tu código de retiro es: ${resp.canje_id || 'generado'}. Revisa "Mis Canjes" en tu perfil.`);
+      // Actualizar puntos en el store global
+      const user = Alpine.store("auth").user;
+      Alpine.store("auth").persist({ ...user, puntos_saldo: resp.nuevo_saldo }, null);
+      navigate("/cliente");
+    } catch (e) {
+      alert(e.message);
+    }
   },
 }));
 
 Alpine.data("clienteView", () => ({
   me: null,
   movs: [],
+  canjes: [],
   loading: true,
+  codigoInput: "",
+  codigoLoading: false,
+  codigoOk: "",
+  codigoError: "",
   formatMoney,
   formatDate,
+
   async init() {
     try {
-      const [me, movs] = await Promise.all([
+      const [me, movs, canjes] = await Promise.all([
         api.get("/cliente/me"),
         api.get("/cliente/movimientos"),
+        api.get("/cliente/canjes"),
       ]);
       this.me = me;
       this.movs = movs;
+      this.canjes = canjes;
     } finally {
       this.loading = false;
+    }
+  },
+
+  async canjearCodigo() {
+    this.codigoOk = "";
+    this.codigoError = "";
+    const codigo = this.codigoInput.trim().toUpperCase();
+    if (!codigo) {
+      this.codigoError = "Ingresá un código.";
+      return;
+    }
+    this.codigoLoading = true;
+    try {
+      const res = await api.post("/cliente/canjear-codigo", { codigo });
+      this.codigoOk = `¡Canjeado! +${res.puntos_ganados} puntos. Nuevo saldo: ${res.nuevo_saldo} pts.`;
+      this.codigoInput = "";
+      const me = await api.get("/cliente/me");
+      this.me = me;
+      const user = Alpine.store("auth").user;
+      if (user) {
+        Alpine.store("auth").persist({ ...user, puntos_saldo: me.puntos_saldo }, null);
+      }
+      const movs = await api.get("/cliente/movimientos");
+      this.movs = movs;
+    } catch (e) {
+      this.codigoError = e.message || "Código inválido o ya utilizado.";
+    } finally {
+      this.codigoLoading = false;
     }
   },
 }));
 
 Alpine.data("vendedorView", () => ({
   dni: "",
+  queryCliente: "",
+  resultadosClientes: [],
   descripcion: "",
   cliente: null,
   productos: [],
   filtro: "",
-  cart: {}, // { producto_id: cantidad }
+  cart: {},
   error: "",
   ok: "",
   busy: false,
@@ -247,27 +366,16 @@ Alpine.data("vendedorView", () => ({
       .map((p) => ({
         ...p,
         cantidad: this.cart[p.id],
-        subtotal_precio: p.precio * this.cart[p.id],
-        subtotal_puntos: p.puntos_por_unidad * this.cart[p.id],
+        subtotal_puntos: (p.puntos_acumulables || 0) * this.cart[p.id],
       }));
-  },
-
-  get totalMonto() {
-    return this.cartItems.reduce((a, i) => a + i.subtotal_precio, 0);
   },
 
   get totalPuntos() {
     return this.cartItems.reduce((a, i) => a + i.subtotal_puntos, 0);
   },
 
-  add(p) {
-    this.cart = { ...this.cart, [p.id]: (this.cart[p.id] || 0) + 1 };
-  },
-
-  inc(id) {
-    this.cart = { ...this.cart, [id]: (this.cart[id] || 0) + 1 };
-  },
-
+  add(p) { this.cart = { ...this.cart, [p.id]: (this.cart[p.id] || 0) + 1 }; },
+  inc(id) { this.cart = { ...this.cart, [id]: (this.cart[id] || 0) + 1 }; },
   dec(id) {
     const next = (this.cart[id] || 0) - 1;
     const copy = { ...this.cart };
@@ -275,42 +383,50 @@ Alpine.data("vendedorView", () => ({
     else copy[id] = next;
     this.cart = copy;
   },
+  clear() { this.cart = {}; this.descripcion = ""; },
 
-  clear() {
-    this.cart = {};
-    this.descripcion = "";
-  },
-
-  async buscar() {
-    this.error = "";
-    this.ok = "";
-    this.cliente = null;
-    if (!this.dni) return;
+  async buscarClientesRealTime() {
+    this.error = ""; this.ok = "";
+    const q = this.queryCliente.trim();
+    if (q.length < 2) {
+      this.resultadosClientes = [];
+      return;
+    }
     try {
-      this.cliente = await api.get(`/vendedor/cliente/${this.dni}`);
+      this.resultadosClientes = await api.get(`/vendedor/clientes/buscar?q=${encodeURIComponent(q)}`);
     } catch (e) {
-      this.error = e.message;
+      this.resultadosClientes = [];
     }
   },
 
+  seleccionarCliente(u) {
+    this.cliente = u;
+    this.dni = u.dni;
+    this.queryCliente = u.nombre;
+    this.resultadosClientes = [];
+  },
+
+  async buscar() {
+    this.error = ""; this.ok = ""; this.cliente = null;
+    if (!this.dni) return;
+    try { this.cliente = await api.get(`/vendedor/cliente/${this.dni}`); }
+    catch (e) { this.error = e.message; }
+  },
+
   async confirmar() {
-    this.error = "";
-    this.ok = "";
+    this.error = ""; this.ok = "";
     if (!this.cliente) return (this.error = "Buscá primero un cliente por DNI");
     if (this.cartItems.length === 0) return (this.error = "Agregá al menos un producto");
     this.busy = true;
     try {
       const items = Object.entries(this.cart).map(([producto_id, cantidad]) => ({
-        producto_id: Number(producto_id),
-        cantidad,
+        producto_id: Number(producto_id), cantidad,
       }));
       const resp = await api.post("/vendedor/cargar", {
-        dni: this.cliente.dni,
-        items,
-        descripcion: this.descripcion || undefined,
+        dni: this.cliente.dni, items, descripcion: this.descripcion || undefined,
       });
-      this.ok = `+${resp.total_puntos} puntos · Total $${formatMoney(resp.total_monto)}. Saldo: ${resp.puntos_totales_cliente}`;
-      this.cliente.puntos = resp.puntos_totales_cliente;
+      this.ok = `+${resp.puntos_acreditados} puntos. Saldo: ${resp.nuevo_saldo}`;
+      this.cliente.puntos = resp.nuevo_saldo;
       this.clear();
     } catch (e) {
       this.error = e.message;
@@ -321,15 +437,31 @@ Alpine.data("vendedorView", () => ({
 }));
 
 Alpine.data("adminView", () => ({
-  tab: "usuarios",
+  tab: "inicio",
   stats: null,
   usuarios: [],
   txs: [],
   productos: [],
+  paginas: [],
+  codigos: [],
+  categorias: [],
+  canjes: [],
+  sobreDraft:    { titulo: "", contenido: "", okMsg: "", errMsg: "", saving: false },
+  terminosDraft: { titulo: "", contenido: "", okMsg: "", errMsg: "", saving: false },
+  nuevaCategoria: { nombre: "", descripcion: "" },
+  nuevoCodigo: { codigo: "", puntos_valor: 0, usos_maximos: 1, fecha_expiracion: "" },
   nuevoUsuario: { email: "", password: "", nombre: "", rol: "vendedor", dni: "" },
-  nuevoProducto: { nombre: "", precio: 0, puntos_por_unidad: 0 },
+  nuevoProducto: {
+    nombre: "", descripcion: "", categoria: "",
+    puntos_requeridos: 0, puntos_acumulables: null,
+    imagen_url: null, imagen_preview: null, imagen_file: null,
+  },
   editId: null,
-  editDraft: { nombre: "", precio: 0, puntos_por_unidad: 0 },
+  editDraft: {
+    nombre: "", descripcion: "", categoria: "",
+    puntos_requeridos: 0, puntos_acumulables: null,
+    imagen_url: null, imagen_preview: null, imagen_file: null,
+  },
   okMsg: "",
   errMsg: "",
   busy: false,
@@ -338,25 +470,141 @@ Alpine.data("adminView", () => ({
 
   async init() {
     await this.refresh();
+    await this.loadPaginasEditor();
   },
 
   async refresh() {
-    const [stats, usuarios, txs, productos] = await Promise.all([
+    /* Promise.allSettled: si UNA falla no bloquea el resto */
+    const results = await Promise.allSettled([
       api.get("/admin/stats"),
       api.get("/admin/usuarios"),
-      api.get("/admin/transacciones"),
+      api.get("/admin/movimientos"),
       api.get("/admin/productos"),
+      api.get("/admin/paginas"),
+      api.get("/admin/codigos"),
+      api.get("/admin/categorias"),
+      api.get("/admin/canjes"),
     ]);
-    this.stats = stats;
-    this.usuarios = usuarios;
-    this.txs = txs;
-    this.productos = productos;
+    const ok = (r) => (r.status === "fulfilled" ? r.value : null);
+    const [stats, usuarios, txs, productos, paginas, codigos, categorias, canjes] = results.map(ok);
+    if (stats)    this.stats    = stats;
+    if (usuarios) this.usuarios = usuarios;
+    if (txs)      this.txs      = txs;
+    if (productos) this.productos = productos;
+    if (paginas)  this.paginas  = paginas;
+    if (codigos)  this.codigos  = codigos;
+    if (categorias) this.categorias = categorias;
+    if (canjes)     this.canjes     = canjes;
+  },
+
+  async loadPaginasEditor() {
+    try {
+      const s = await api.get("/admin/paginas/sobre-nosotros");
+      this.sobreDraft.titulo   = s.titulo;
+      this.sobreDraft.contenido = s.contenido;
+    } catch (_) {}
+    try {
+      const t = await api.get("/admin/paginas/terminos");
+      this.terminosDraft.titulo   = t.titulo;
+      this.terminosDraft.contenido = t.contenido;
+    } catch (_) {}
+  },
+
+  async guardarPaginaSlug(slug, draft) {
+    draft.errMsg = ""; draft.okMsg = "";
+    draft.saving = true;
+    try {
+      await api.put(`/admin/paginas/${slug}`, { titulo: draft.titulo, contenido: draft.contenido });
+      draft.okMsg = "¡Guardado!";
+      setTimeout(() => { draft.okMsg = ""; }, 3000);
+    } catch (e) { draft.errMsg = e.message; }
+    finally { draft.saving = false; }
+  },
+
+  // Previsualiza la imagen seleccionada antes de subir
+  seleccionarImagen(event, target) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (target === "nuevo") {
+        this.nuevoProducto.imagen_file = file;
+        this.nuevoProducto.imagen_preview = e.target.result;
+      } else {
+        this.editDraft.imagen_file = file;
+        this.editDraft.imagen_preview = e.target.result;
+      }
+    };
+    reader.readAsDataURL(file);
+  },
+
+  // Sube la imagen al servidor y devuelve la URL
+  async subirImagen(file) {
+    const token = localStorage.getItem("token");
+    const form = new FormData();
+    form.append("imagen", file);
+    const res = await fetch("/api/admin/productos/upload", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || "Error al subir imagen");
+    }
+    const { url } = await res.json();
+    return url;
+  },
+
+  async editarPagina(slug) {
+    this.paginaEditando = slug;
+    const page = await api.get(`/admin/paginas/${slug}`);
+    this.paginaDraft = { titulo: page.titulo, contenido: page.contenido };
+  },
+
+  get paginaHtml() {
+    return marked(this.paginaDraft.contenido || "");
+  },
+
+  async guardarPagina() {
+    this.okMsg = ""; this.errMsg = "";
+    try {
+      await api.put(`/admin/paginas/${this.paginaEditando}`, this.paginaDraft);
+      this.okMsg = "Página guardada correctamente.";
+      this.paginaEditando = null;
+      await this.refresh();
+    } catch (e) { this.errMsg = e.message; }
+  },
+
+  async crearCodigo() {
+    this.okMsg = ""; this.errMsg = "";
+    const c = this.nuevoCodigo;
+    if (!c.codigo.trim()) return (this.errMsg = "El código es obligatorio");
+    if (!c.puntos_valor || Number(c.puntos_valor) <= 0) return (this.errMsg = "Los puntos deben ser mayores a 0");
+    this.busy = true;
+    try {
+      await api.post("/admin/codigos", {
+        codigo:           c.codigo.trim().toUpperCase(),
+        puntos_valor:     Number(c.puntos_valor),
+        usos_maximos:     Number(c.usos_maximos) >= 0 ? Number(c.usos_maximos) : 1,
+        fecha_expiracion: c.fecha_expiracion ? new Date(c.fecha_expiracion).toISOString() : null,
+      });
+      this.okMsg = `Código ${c.codigo.toUpperCase()} creado`;
+      this.nuevoCodigo = { codigo: "", puntos_valor: 0, usos_maximos: 1, fecha_expiracion: "" };
+      await this.refresh();
+    } catch (e) { this.errMsg = e.message; }
+    finally { this.busy = false; }
+  },
+
+  async toggleCodigo(c) {
+    try {
+      await api.patch(`/admin/codigos/${c.id}`, { activo: !c.activo });
+      await this.refresh();
+    } catch (e) { this.errMsg = e.message; }
   },
 
   async crearUsuario() {
-    this.okMsg = "";
-    this.errMsg = "";
-    this.busy = true;
+    this.okMsg = ""; this.errMsg = ""; this.busy = true;
     try {
       await api.post("/admin/usuarios", {
         ...this.nuevoUsuario,
@@ -365,76 +613,139 @@ Alpine.data("adminView", () => ({
       this.okMsg = "Usuario creado";
       this.nuevoUsuario = { email: "", password: "", nombre: "", rol: "vendedor", dni: "" };
       await this.refresh();
-    } catch (e) {
-      this.errMsg = e.message;
-    } finally {
-      this.busy = false;
-    }
+    } catch (e) { this.errMsg = e.message; }
+    finally { this.busy = false; }
+  },
+
+  async crearCategoria() {
+    this.okMsg = ""; this.errMsg = "";
+    if (!this.nuevaCategoria.nombre.trim()) return (this.errMsg = "El nombre es obligatorio");
+    this.busy = true;
+    try {
+      await api.post("/admin/categorias", {
+        nombre: this.nuevaCategoria.nombre.trim(),
+        descripcion: this.nuevaCategoria.descripcion || null
+      });
+      this.okMsg = "Categoría creada";
+      this.nuevaCategoria = { nombre: "", descripcion: "" };
+      await this.refresh();
+    } catch (e) { this.errMsg = e.message; }
+    finally { this.busy = false; }
+  },
+
+  async eliminarCategoria(id) {
+    if (!confirm("¿Estás seguro de eliminar esta categoría?")) return;
+    try {
+      await api.delete(`/admin/categorias/${id}`);
+      await this.refresh();
+    } catch (e) { alert(e.message); }
+  },
+
+  async actualizarEstadoCanje(id, estado) {
+    if (!confirm(`¿Cambiar estado a ${estado}?`)) return;
+    try {
+      await api.patch(`/admin/canjes/${id}`, { estado });
+      await this.refresh();
+    } catch (e) { alert(e.message); }
   },
 
   async crearProducto() {
-    this.okMsg = "";
-    this.errMsg = "";
+    this.okMsg = ""; this.errMsg = "";
     const p = this.nuevoProducto;
-    if (!p.nombre) return (this.errMsg = "Nombre requerido");
-    if (p.precio < 0 || p.puntos_por_unidad < 0)
-      return (this.errMsg = "Valores no pueden ser negativos");
+    if (!p.nombre.trim()) return (this.errMsg = "El nombre es obligatorio");
+    if (!p.puntos_requeridos || p.puntos_requeridos <= 0) return (this.errMsg = "Puntos requeridos debe ser mayor a 0");
     this.busy = true;
     try {
+      let imagen_url = p.imagen_url;
+      if (p.imagen_file) imagen_url = await this.subirImagen(p.imagen_file);
+
       await api.post("/admin/productos", {
-        nombre: p.nombre,
-        precio: Number(p.precio),
-        puntos_por_unidad: Number(p.puntos_por_unidad),
+        nombre:             p.nombre.trim(),
+        descripcion:        p.descripcion || null,
+        categoria:          p.categoria || null,
+        puntos_requeridos:  Number(p.puntos_requeridos),
+        puntos_acumulables: p.puntos_acumulables ? Number(p.puntos_acumulables) : null,
+        imagen_url:         imagen_url || null,
       });
-      this.okMsg = "Producto creado";
-      this.nuevoProducto = { nombre: "", precio: 0, puntos_por_unidad: 0 };
+      this.okMsg = "Producto creado correctamente";
+      this.nuevoProducto = {
+        nombre: "", descripcion: "", categoria: "",
+        puntos_requeridos: 0, puntos_acumulables: null,
+        imagen_url: null, imagen_preview: null, imagen_file: null,
+      };
       await this.refresh();
-    } catch (e) {
-      this.errMsg = e.message;
-    } finally {
-      this.busy = false;
-    }
+    } catch (e) { this.errMsg = e.message; }
+    finally { this.busy = false; }
   },
 
   startEdit(p) {
     this.editId = p.id;
     this.editDraft = {
-      nombre: p.nombre,
-      precio: p.precio,
-      puntos_por_unidad: p.puntos_por_unidad,
+      nombre:             p.nombre,
+      descripcion:        p.descripcion || "",
+      categoria:          p.categoria || "",
+      puntos_requeridos:  p.puntos_requeridos,
+      puntos_acumulables: p.puntos_acumulables,
+      imagen_url:         p.imagen_url,
+      imagen_preview:     null,
+      imagen_file:        null,
     };
   },
-
-  cancelEdit() {
-    this.editId = null;
-  },
+  cancelEdit() { this.editId = null; },
 
   async saveEdit(p) {
+    this.errMsg = ""; this.busy = true;
     try {
+      let imagen_url = this.editDraft.imagen_url;
+      if (this.editDraft.imagen_file) imagen_url = await this.subirImagen(this.editDraft.imagen_file);
+
       await api.put(`/admin/productos/${p.id}`, {
-        nombre: this.editDraft.nombre,
-        precio: Number(this.editDraft.precio),
-        puntos_por_unidad: Number(this.editDraft.puntos_por_unidad),
-        activo: !!p.activo,
+        nombre:             this.editDraft.nombre.trim(),
+        descripcion:        this.editDraft.descripcion || null,
+        categoria:          this.editDraft.categoria || null,
+        puntos_requeridos:  Number(this.editDraft.puntos_requeridos),
+        puntos_acumulables: this.editDraft.puntos_acumulables ? Number(this.editDraft.puntos_acumulables) : null,
+        imagen_url:         imagen_url || null,
+        activo:             !!p.activo,
       });
       this.editId = null;
+      this.okMsg = "Producto actualizado";
       await this.refresh();
-    } catch (e) {
-      this.errMsg = e.message;
-    }
+    } catch (e) { this.errMsg = e.message; }
+    finally { this.busy = false; }
   },
 
   async toggleActivo(p) {
     try {
-      await api.put(`/admin/productos/${p.id}`, {
-        nombre: p.nombre,
-        precio: p.precio,
-        puntos_por_unidad: p.puntos_por_unidad,
-        activo: !p.activo,
-      });
+      await api.patch(`/admin/productos/${p.id}/activo`, { activo: !p.activo });
       await this.refresh();
+    } catch (e) { this.errMsg = e.message; }
+  },
+}));
+
+Alpine.data("paginaView", () => ({
+  slug: "",
+  titulo: "",
+  contenido: "",
+  loading: true,
+  error: "",
+
+  get html() {
+    return marked(this.contenido || "");
+  },
+
+  async init() {
+    // Determinar el slug según la ruta actual
+    const route = Alpine.store("router").current;
+    this.slug = route === "/sobre-nosotros" ? "sobre-nosotros" : "terminos";
+    try {
+      const page = await api.get(`/paginas/${this.slug}`);
+      this.titulo = page.titulo;
+      this.contenido = page.contenido;
     } catch (e) {
-      this.errMsg = e.message;
+      this.error = "No se pudo cargar el contenido.";
+    } finally {
+      this.loading = false;
     }
   },
 }));
