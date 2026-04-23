@@ -479,6 +479,49 @@
 }
 .adm-product-row:last-child { border-bottom: none; }
 
+.adm-list-search {
+  margin: -0.25rem 0 0.8rem;
+}
+
+.adm-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.adm-inline-points-box {
+  padding: 0.85rem 1rem;
+  border: 1px dashed rgba(180,84,20,0.28);
+  border-radius: 10px;
+  background: #FFF8F0;
+}
+
+.adm-inline-points-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #5C2D0E;
+}
+
+.adm-inline-points-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 0.6rem;
+}
+
+.adm-inline-points-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.adm-btn-inline {
+  width: auto;
+  flex: 0 0 auto;
+}
+
 /* ══════════════════════════════════════
    BLOQUE DE NOTAS (Páginas Web)
    ══════════════════════════════════════ */
@@ -778,6 +821,9 @@
   .admin-topbar-date { display: none; }
   .admin-stats   { grid-template-columns: repeat(2, 1fr); }
   .adm-form-grid { grid-template-columns: 1fr; }
+  .adm-inline-points-grid { grid-template-columns: 1fr; }
+  .adm-inline-points-actions { justify-content: stretch; }
+  .adm-btn-inline { width: 100%; }
   .adm-notepads-grid    { grid-template-columns: 1fr; }
   .adm-page-editor-grid { grid-template-columns: 1fr; }
   .adm-page-textarea    { min-height: 240px; }

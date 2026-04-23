@@ -1,12 +1,12 @@
-/* ==============================
-   LOGIN PAGE — DEDICATED STYLES
+﻿/* ==============================
+   LOGIN PAGE â€” DEDICATED STYLES
    ==============================
-   PALETA DE COLORES — editá estas variables en cada regla:
+   PALETA DE COLORES â€” editÃ¡ estas variables en cada regla:
    Naranja principal:  #D4621A
    Naranja hover:      #B85415
    Naranja claro (bg): #FEF3E8
    Borde naranja:      #F5C8A8
-   Fondo página:       #FDF6EE  (crema cálido)
+   Fondo pÃ¡gina:       #FDF6EE  (crema cÃ¡lido)
    ============================== */
 
 .login-page {
@@ -14,17 +14,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #FDF6EE;    /* ← color de fondo de la página de login */
+  background: transparent;
   padding: 2rem 1rem;
   box-sizing: border-box;
 }
 
+body.auth-background {
+  background-image: url("/fondoseguro.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+}
+
+body.auth-background .app-main {
+  background: transparent;
+}
 /* Card */
 .login-card {
-  background: #ffffff;          /* ← fondo de la tarjeta de login */
+  background: #ffffff;          /* â† fondo de la tarjeta de login */
   border-radius: 18px;
-  box-shadow: 0 8px 40px rgba(180, 70, 10, 0.12); /* ← sombra de la tarjeta */
-  border-left: 5px solid #D4621A; /* ← franja de color izquierda de la tarjeta */
+  box-shadow: 0 8px 40px rgba(180, 70, 10, 0.12); /* â† sombra de la tarjeta */
+  border-left: 5px solid #D4621A; /* â† franja de color izquierda de la tarjeta */
   width: 100%;
   max-width: 460px;
   padding: 2.5rem 2rem;
@@ -49,14 +60,14 @@
   font-size: 2rem;
   font-weight: 800;
   text-align: center;
-  color: #111827;               /* ← color del título "Iniciar Sesión" */
+  color: #111827;               /* â† color del tÃ­tulo "Iniciar SesiÃ³n" */
   margin: 0 0 0.35rem;
   letter-spacing: -0.5px;
 }
 
 .login-subheading {
   text-align: center;
-  color: #D4621A;               /* ← color del subtítulo "Bienvenido de nuevo" */
+  color: #D4621A;               /* â† color del subtÃ­tulo "Bienvenido de nuevo" */
   font-size: 0.9rem;
   font-weight: 600;
   margin: 0 0 2rem;
@@ -67,7 +78,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;               /* ← color de las etiquetas de los campos */
+  color: #374151;               /* â† color de las etiquetas de los campos */
   margin-bottom: 0.5rem;
 }
 
@@ -82,7 +93,7 @@
   left: 0.9rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #C4A882;               /* ← color de los íconos dentro de los inputs */
+  color: #C4A882;               /* â† color de los Ã­conos dentro de los inputs */
   display: flex;
   align-items: center;
   pointer-events: none;
@@ -91,25 +102,29 @@
 .login-input {
   width: 100%;
   padding: 0.875rem 1rem 0.875rem 2.75rem;
-  border: 1.5px solid #F0DBC5; /* ← borde de los inputs */
+  border: 1.5px solid #F0DBC5; /* â† borde de los inputs */
   border-radius: 10px;
   font-size: 0.95rem;
-  background: #FFFAF5;          /* ← fondo de los inputs */
-  color: #111827;               /* ← color del texto en los inputs */
+  background: #FFFAF5;          /* â† fondo de los inputs */
+  color: #111827;               /* â† color del texto en los inputs */
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   box-sizing: border-box;
   font-family: inherit;
 }
 
+.login-input-noicon {
+  padding-left: 1rem;
+}
+
 .login-input:focus {
-  border-color: #D4621A;        /* ← borde de los inputs cuando están enfocados */
-  box-shadow: 0 0 0 3px rgba(212, 98, 26, 0.15); /* ← resplandor del input enfocado */
+  border-color: #D4621A;        /* â† borde de los inputs cuando estÃ¡n enfocados */
+  box-shadow: 0 0 0 3px rgba(212, 98, 26, 0.15); /* â† resplandor del input enfocado */
   background: #ffffff;
 }
 
 .login-input::placeholder {
-  color: #C4A882;               /* ← color del placeholder de los inputs */
+  color: #C4A882;               /* â† color del placeholder de los inputs */
 }
 
 .login-input-password {
@@ -125,7 +140,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #C4A882;               /* ← color del ícono de ojo (mostrar/ocultar contraseña) */
+  color: #C4A882;               /* â† color del Ã­cono de ojo (mostrar/ocultar contraseÃ±a) */
   padding: 0.25rem;
   display: flex;
   align-items: center;
@@ -133,7 +148,7 @@
 }
 
 .login-input-toggle:hover {
-  color: #D4621A;               /* ← color hover del ícono de ojo */
+  color: #D4621A;               /* â† color hover del Ã­cono de ojo */
 }
 
 /* Options row */
@@ -151,7 +166,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #374151;               /* ← color del texto "Recordarme" */
+  color: #374151;               /* â† color del texto "Recordarme" */
   cursor: pointer;
   user-select: none;
 }
@@ -159,14 +174,14 @@
 .login-remember input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #D4621A;        /* ← color del checkbox "Recordarme" */
+  accent-color: #D4621A;        /* â† color del checkbox "Recordarme" */
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .login-forgot {
   font-size: 0.875rem;
-  color: #D4621A;               /* ← color del link "¿Olvidaste tu contraseña?" */
+  color: #D4621A;               /* â† color del link "Â¿Olvidaste tu contraseÃ±a?" */
   text-decoration: none;
   font-weight: 600;
   transition: opacity 0.2s;
@@ -182,8 +197,8 @@
 .login-btn-primary {
   width: 100%;
   padding: 1rem;
-  background: #D4621A;          /* ← color de fondo del botón "Iniciar Sesión" */
-  color: #ffffff;               /* ← color del texto del botón "Iniciar Sesión" */
+  background: #D4621A;          /* â† color de fondo del botÃ³n "Iniciar SesiÃ³n" */
+  color: #ffffff;               /* â† color del texto del botÃ³n "Iniciar SesiÃ³n" */
   font-size: 1rem;
   font-weight: 700;
   border: none;
@@ -199,7 +214,7 @@
 }
 
 .login-btn-primary:hover:not(:disabled) {
-  background: #B85415;          /* ← color hover del botón "Iniciar Sesión" */
+  background: #B85415;          /* â† color hover del botÃ³n "Iniciar SesiÃ³n" */
 }
 
 .login-btn-primary:active:not(:disabled) {
@@ -217,7 +232,7 @@
   align-items: center;
   gap: 0.75rem;
   margin: 1.5rem 0;
-  color: #C4A882;               /* ← color del texto "o continúa con" */
+  color: #C4A882;               /* â† color del texto "o continÃºa con" */
   font-size: 0.8rem;
 }
 
@@ -226,18 +241,18 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: #F0DBC5;          /* ← color de las líneas del separador */
+  background: #F0DBC5;          /* â† color de las lÃ­neas del separador */
 }
 
 /* Google button */
 .login-btn-google {
   width: 100%;
   padding: 0.875rem 1rem;
-  background: #ffffff;          /* ← fondo del botón "Continuar con Google" */
-  color: #111827;               /* ← color del texto del botón de Google */
+  background: #ffffff;          /* â† fondo del botÃ³n "Continuar con Google" */
+  color: #111827;               /* â† color del texto del botÃ³n de Google */
   font-size: 0.95rem;
   font-weight: 500;
-  border: 1.5px solid #F0DBC5; /* ← borde del botón de Google */
+  border: 1.5px solid #F0DBC5; /* â† borde del botÃ³n de Google */
   border-radius: 10px;
   cursor: pointer;
   display: flex;
@@ -249,20 +264,55 @@
 }
 
 .login-btn-google:hover {
-  background: #FEF3E8;          /* ← fondo hover del botón de Google */
-  border-color: #F5C8A8;        /* ← borde hover del botón de Google */
+  background: #FEF3E8;          /* â† fondo hover del botÃ³n de Google */
+  border-color: #F5C8A8;        /* â† borde hover del botÃ³n de Google */
 }
 
 .login-btn-google:active {
   transform: scale(0.98);
 }
 
+.login-google-button-shell {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.login-google-button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+}
+
 /* Error message */
 .login-error {
   font-size: 0.85rem;
-  color: #ef4444;               /* ← color del mensaje de error */
+  color: #ef4444;               /* â† color del mensaje de error */
   margin-bottom: 0.75rem;
   text-align: center;
+}
+
+.login-info {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0.75rem 0 0;
+  text-align: center;
+}
+
+.auth-floating-toast {
+  position: fixed;
+  top: 84px;
+  right: 16px;
+  z-index: 1200;
+  background: #166534;
+  color: #ffffff;
+  padding: 0.7rem 0.95rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  font-size: 0.9rem;
+  font-weight: 600;
+  animation: auth-toast-in 0.2s ease-out;
 }
 
 /* Footer */
@@ -270,11 +320,11 @@
   text-align: center;
   margin-top: 1.75rem;
   font-size: 0.875rem;
-  color: #6b7280;               /* ← color del texto "¿No tienes una cuenta?" */
+  color: #6b7280;               /* â† color del texto "Â¿No tienes una cuenta?" */
 }
 
 .login-footer a {
-  color: #D4621A;               /* ← color del link "Regístrate aquí" */
+  color: #D4621A;               /* â† color del link "RegÃ­strate aquÃ­" */
   font-weight: 700;
   text-decoration: none;
   transition: opacity 0.2s;
@@ -311,7 +361,7 @@
   .login-page {
     align-items: flex-start;
     padding-top: 1.5rem;
-    background-color: #ffffff;  /* ← fondo de la página login en mobile (sin tarjeta flotante) */
+    background: transparent;
   }
 
   .login-card {
@@ -323,8 +373,7 @@
 /* Tablet >= 640px: card floats on gradient (igual que segunda imagen) */
 @media (min-width: 640px) {
   .login-page {
-    /* ← gradiente de fondo login en tablet+ (naranja cálido radial, como la segunda imagen) */
-    background: radial-gradient(ellipse at 35% 35%, #FEF0DC 0%, #F5C49A 55%, #D4884A 100%);
+    background: transparent;
   }
 }
 
@@ -338,3 +387,15 @@
     font-size: 2.2rem;
   }
 }
+
+@keyframes auth-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

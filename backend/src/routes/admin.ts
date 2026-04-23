@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { pool, qOne, qAll, qRun } from "../db";
 import { requireAuth, requireRole } from "../auth";
+const INVITE_CODE_LENGTH = 9;
 
 // ── Configuración de multer para subida de imágenes ──────
 const storage = multer.diskStorage({
@@ -28,6 +29,28 @@ const upload = multer({
 
 const router = Router();
 router.use(requireAuth, requireRole("admin"));
+
+const strongPasswordSchema = z
+  .string()
+  .min(8, "La contrasena debe tener al menos 8 caracteres")
+  .regex(/(?:.*\d){3,}/, "La contrasena debe incluir al menos 3 numeros")
+  .regex(
+    /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/,
+    "La contrasena debe incluir al menos 1 caracter especial",
+  );
+
+function makeInviteCode(length: number): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+async function uniqueInviteCode(length: number): Promise<string> {
+  while (true) {
+    const code = makeInviteCode(length);
+    const exists = await qOne(pool, "SELECT id FROM usuarios WHERE codigo_invitacion = ?", [code]);
+    if (!exists) return code;
+  }
+}
 
 // ════════════════════════════════════════════════════════
 //  ESTADÍSTICAS
@@ -65,8 +88,8 @@ router.post("/usuarios", async (req, res) => {
   const schema = z.object({
     nombre:   z.string().min(1).max(100),
     email:    z.string().email(),
-    password: z.string().min(6),
-    rol:      z.enum(["cliente", "admin"]),
+    password: strongPasswordSchema,
+    rol:      z.enum(["cliente", "vendedor", "admin"]),
     dni:      z.string().min(6).optional(),
   });
   const parsed = schema.safeParse(req.body);
@@ -79,8 +102,7 @@ router.post("/usuarios", async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     let codigo: string | null = null;
     if (rol === "cliente") {
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      codigo = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      codigo = await uniqueInviteCode(INVITE_CODE_LENGTH);
     }
     const { insertId } = await qRun(pool,
       `INSERT INTO usuarios (nombre, email, password_hash, rol, dni, codigo_invitacion) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -204,7 +226,7 @@ router.patch("/codigos/:id", async (req, res) => {
 
 router.get("/canjes", async (_req, res) => {
   const rows = await qAll(pool,
-    `SELECT c.id, c.puntos_usados, c.estado, c.fecha_limite_retiro, c.notas,
+    `SELECT c.id, c.codigo_retiro, c.puntos_usados, c.estado, c.fecha_limite_retiro, c.notas,
             c.created_at, c.updated_at,
             u.nombre AS cliente_nombre, u.email AS cliente_email, u.dni AS cliente_dni,
             p.nombre AS producto_nombre
@@ -289,10 +311,12 @@ router.get("/productos", async (_req, res) => {
 });
 
 // POST /admin/productos/upload — recibe imagen y devuelve la URL pública
-router.post("/productos/upload", upload.single("imagen"), (req, res) => {
-  if (!req.file) { res.status(400).json({ error: "No se recibió ningún archivo" }); return; }
-  const url = `/uploads/${req.file.filename}`;
-  res.json({ url });
+router.post("/productos/upload", (req, res, next) => {
+  upload.single("imagen")(req, res, (err) => {
+    if (err) { res.status(400).json({ error: err.message }); return; }
+    if (!req.file) { res.status(400).json({ error: "No se recibió ningún archivo" }); return; }
+    res.json({ url: `/uploads/${req.file.filename}` });
+  });
 });
 
 router.post("/productos", async (req, res) => {
@@ -350,21 +374,17 @@ router.patch("/productos/:id/activo", async (req, res) => {
 // ════════════════════════════════════════════════════════
 
 router.get("/categorias", async (_req, res) => {
-  const rows = await qAll(pool, "SELECT id, nombre, descripcion, created_at FROM categorias ORDER BY nombre ASC");
+  const rows = await qAll(pool, "SELECT id, nombre, created_at FROM categorias ORDER BY nombre ASC");
   res.json(rows);
 });
 
 router.post("/categorias", async (req, res) => {
-  const schema = z.object({
-    nombre:      z.string().min(1).max(100),
-    descripcion: z.string().max(1000).optional().nullable(),
-  });
+  const schema = z.object({ nombre: z.string().min(1).max(100) });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
-  const { nombre, descripcion } = parsed.data;
 
   try {
-    const { insertId } = await qRun(pool, "INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)", [nombre, descripcion ?? null]);
+    const { insertId } = await qRun(pool, "INSERT INTO categorias (nombre) VALUES (?)", [parsed.data.nombre]);
     res.status(201).json({ id: insertId });
   } catch (err: any) {
     if (err.code === "ER_DUP_ENTRY") { res.status(409).json({ error: "Ya existe una categoría con ese nombre" }); return; }
@@ -374,16 +394,12 @@ router.post("/categorias", async (req, res) => {
 
 router.put("/categorias/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const schema = z.object({
-    nombre:      z.string().min(1).max(100),
-    descripcion: z.string().max(1000).optional().nullable(),
-  });
+  const schema = z.object({ nombre: z.string().min(1).max(100) });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
-  const { nombre, descripcion } = parsed.data;
 
   try {
-    const { affectedRows } = await qRun(pool, "UPDATE categorias SET nombre=?, descripcion=? WHERE id=?", [nombre, descripcion ?? null, id]);
+    const { affectedRows } = await qRun(pool, "UPDATE categorias SET nombre=? WHERE id=?", [parsed.data.nombre, id]);
     if (affectedRows === 0) { res.status(404).json({ error: "Categoría no encontrada" }); return; }
     res.json({ ok: true });
   } catch (err: any) {
@@ -392,12 +408,6 @@ router.put("/categorias/:id", async (req, res) => {
   }
 });
 
-router.delete("/categorias/:id", async (req, res) => {
-  const id = Number(req.params.id);
-  const { affectedRows } = await qRun(pool, "DELETE FROM categorias WHERE id=?", [id]);
-  if (affectedRows === 0) { res.status(404).json({ error: "Categoría no encontrada" }); return; }
-  res.json({ ok: true });
-});
 
 // ════════════════════════════════════════════════════════
 //  CONFIGURACIÓN

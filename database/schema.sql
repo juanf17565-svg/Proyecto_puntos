@@ -4,8 +4,10 @@
 --
 --  USO:
 --    Docker  → se ejecuta automáticamente al primer arranque
---    phpMyAdmin → Importar este archivo directamente (ya incluye
---                 CREATE DATABASE y USE)
+--    phpMyAdmin → Importar este archivo directamente
+--
+--  Para reset completo: ejecutar primero la sección DOWN,
+--  luego la sección UP (o importar este archivo entero).
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS nande_puntos
@@ -14,11 +16,33 @@ CREATE DATABASE IF NOT EXISTS nande_puntos
 
 USE nande_puntos;
 
+-- ============================================================
+-- DOWN — elimina todo en orden inverso de dependencias
+-- ============================================================
+
 SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS movimientos_puntos;
+DROP TABLE IF EXISTS canjes;
+DROP TABLE IF EXISTS referidos;
+DROP TABLE IF EXISTS usos_codigos;
+DROP TABLE IF EXISTS codigos_puntos;
+DROP TABLE IF EXISTS password_reset_tokens;
+DROP TABLE IF EXISTS categorias;
+DROP TABLE IF EXISTS paginas_contenido;
+DROP TABLE IF EXISTS configuracion;
+DROP TABLE IF EXISTS productos;
+DROP TABLE IF EXISTS usuarios;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
+-- UP — crea todas las tablas
+-- ============================================================
 
 -- ============================================================
 -- TABLA: usuarios
--- Almacena admins y clientes.
+-- Almacena admins, vendedores y clientes.
 -- codigo_invitacion: código único que cada cliente puede
 --   compartir para invitar a otros (generado al registrarse).
 -- referido_por: quién lo invitó. Solo se setea una vez.
@@ -27,8 +51,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id                  INT             PRIMARY KEY AUTO_INCREMENT,
     nombre              VARCHAR(100)    NOT NULL,
     email               VARCHAR(150)    NOT NULL UNIQUE,
+    google_id           VARCHAR(255)    NULL UNIQUE,
     password_hash       VARCHAR(255)    NOT NULL,
-    rol                 ENUM('admin','cliente') NOT NULL DEFAULT 'cliente',
+    rol                 ENUM('admin','vendedor','cliente') NOT NULL DEFAULT 'cliente',
     dni                 VARCHAR(20)     NULL,
     puntos_saldo        INT             NOT NULL DEFAULT 0,
     codigo_invitacion   VARCHAR(20)     NULL UNIQUE,
@@ -40,6 +65,29 @@ CREATE TABLE IF NOT EXISTS usuarios (
         FOREIGN KEY (referido_por) REFERENCES usuarios(id)
         ON DELETE SET NULL
 );
+
+-- ============================================================
+-- TABLA: password_reset_tokens
+-- Tokens de un solo uso para recuperacion segura de contrasena.
+-- Se almacena hash del token (nunca el token en claro).
+-- ============================================================
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id                      BIGINT          PRIMARY KEY AUTO_INCREMENT,
+    usuario_id              INT             NOT NULL,
+    token_hash              CHAR(64)        NOT NULL UNIQUE,
+    expires_at              DATETIME        NOT NULL,
+    used_at                 DATETIME        NULL,
+    requested_ip            VARCHAR(64)     NULL,
+    requested_user_agent    VARCHAR(255)    NULL,
+    created_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_pwd_reset_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_pwd_reset_usuario_estado
+    ON password_reset_tokens (usuario_id, used_at, expires_at);
 
 -- ============================================================
 -- TABLA: productos
@@ -134,6 +182,7 @@ CREATE TABLE IF NOT EXISTS canjes (
     id                  INT             PRIMARY KEY AUTO_INCREMENT,
     usuario_id          INT             NOT NULL,
     producto_id         INT             NOT NULL,
+    codigo_retiro       VARCHAR(9)      NOT NULL UNIQUE,
     puntos_usados       INT             NOT NULL,
     estado              ENUM('pendiente','entregado','no_disponible','expirado','cancelado')
                                         NOT NULL DEFAULT 'pendiente',
@@ -200,7 +249,6 @@ CREATE TABLE IF NOT EXISTS configuracion (
 -- ============================================================
 -- TABLA: categorias
 -- Categorías de productos gestionadas desde el panel admin.
--- El campo categoria en productos referencia el nombre aquí.
 -- ============================================================
 CREATE TABLE IF NOT EXISTS categorias (
     id                  INT             PRIMARY KEY AUTO_INCREMENT,
@@ -222,10 +270,8 @@ CREATE TABLE IF NOT EXISTS paginas_contenido (
                                 ON UPDATE CURRENT_TIMESTAMP
 );
 
-SET FOREIGN_KEY_CHECKS = 1;
-
 -- ============================================================
--- DML: DATOS INICIALES
+-- SEED: configuración global
 -- ============================================================
 
 INSERT INTO configuracion (clave, valor, descripcion) VALUES
@@ -235,9 +281,13 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
         'Puntos que recibe el nuevo usuario al registrarse con un código'),
     ('dias_limite_retiro', '7',
         'Días que tiene el cliente para retirar un producto canjeado'),
-    ('longitud_codigo_invitacion', '8',
+    ('longitud_codigo_invitacion', '9',
         'Longitud del código de invitación generado automáticamente')
-ON DUPLICATE KEY UPDATE clave = clave;
+ON DUPLICATE KEY UPDATE valor = VALUES(valor);
+
+-- ============================================================
+-- SEED: páginas de contenido
+-- ============================================================
 
 INSERT INTO paginas_contenido (slug, titulo, contenido) VALUES
 (
@@ -253,15 +303,35 @@ INSERT INTO paginas_contenido (slug, titulo, contenido) VALUES
 ON DUPLICATE KEY UPDATE slug = slug;
 
 -- ============================================================
--- ADMIN POR DEFECTO
--- Contraseña: admin123 (hash bcrypt rounds=10)
--- Cambiar desde el panel en producción.
+-- SEED: usuarios de prueba
+--
+-- admin      → email: admin@nande.com      / pass: admin123
+-- vendedor   → email: vendedor@nande.com   / pass: vendedor123
+-- cliente    → email: cliente@nande.com    / pass: cliente123
+--
+-- ¡Cambiar contraseñas antes de producción!
 -- ============================================================
-INSERT INTO usuarios (nombre, email, password_hash, rol, activo)
-VALUES (
+
+INSERT INTO usuarios (nombre, email, password_hash, rol, activo) VALUES
+(
     'Administrador',
     'admin@nande.com',
     '$2a$10$HEM7Iz0RkrdFwrHLQG0tqONTOohsDZiZnmjDfSIJNOufn0xX/1LlS',
     'admin',
     1
-) ON DUPLICATE KEY UPDATE email = email;
+),
+(
+    'Vendedor Demo',
+    'vendedor@nande.com',
+    '$2a$10$ieKqT4knbgcClgVfOKEeE.IxAXQM95q76j3KGFtpY1W7XyQQ0wyK6',
+    'vendedor',
+    1
+),
+(
+    'Cliente Demo',
+    'cliente@nande.com',
+    '$2a$10$6yOzuxgZ6g4PqPOeGVXYoOwEr7I0NVEbuJU7744z3qqZbxglkF1Jy',
+    'cliente',
+    1
+)
+ON DUPLICATE KEY UPDATE email = email;

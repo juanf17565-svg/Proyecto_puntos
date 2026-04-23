@@ -113,4 +113,75 @@ router.post("/cargar", async (req, res, next) => {
   }
 });
 
+// Buscar canje por código de retiro
+router.get("/canje/:codigo", async (req, res, next) => {
+  try {
+    const codigo = req.params.codigo.trim().toUpperCase();
+    const canje = await qOne(pool,
+      `SELECT c.id, c.codigo_retiro, c.puntos_usados, c.estado, c.fecha_limite_retiro, c.notas,
+              u.nombre AS cliente_nombre, u.dni AS cliente_dni,
+              p.nombre AS producto_nombre
+       FROM canjes c
+       JOIN usuarios u ON u.id = c.usuario_id
+       JOIN productos p ON p.id = c.producto_id
+       WHERE c.codigo_retiro = ?`,
+      [codigo]
+    );
+    if (!canje) { res.status(404).json({ error: "Código de retiro no encontrado" }); return; }
+    res.json(canje);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Actualizar estado de un canje (entregado / no_disponible / cancelado)
+router.patch("/canje/:codigo", async (req, res, next) => {
+  const codigo = req.params.codigo.trim().toUpperCase();
+  const schema = z.object({
+    estado: z.enum(["entregado", "no_disponible", "cancelado"]),
+    notas: z.string().max(500).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
+  const { estado, notas } = parsed.data;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const canje = await qOne(conn,
+      "SELECT id, usuario_id, puntos_usados, estado FROM canjes WHERE codigo_retiro = ? FOR UPDATE",
+      [codigo]
+    );
+    if (!canje) { await conn.rollback(); res.status(404).json({ error: "Código de retiro no encontrado" }); return; }
+    if (canje.estado === "entregado" || canje.estado === "cancelado") {
+      await conn.rollback();
+      res.status(400).json({ error: `El canje ya está en estado '${canje.estado}'` });
+      return;
+    }
+
+    await qRun(conn, "UPDATE canjes SET estado = ?, notas = ? WHERE id = ?", [estado, notas ?? null, canje.id]);
+
+    if (estado === "no_disponible" || estado === "cancelado") {
+      const motivo = estado === "cancelado" ? "cancelado" : "no disponible";
+      await qRun(conn,
+        `INSERT INTO movimientos_puntos
+           (usuario_id, tipo, puntos, descripcion, referencia_id, referencia_tipo, creado_por)
+         VALUES (?, 'devolucion_canje', ?, ?, ?, 'canjes', ?)`,
+        [canje.usuario_id, canje.puntos_usados, `Devolución por canje ${motivo}`, canje.id, req.user!.id]
+      );
+      await qRun(conn, "UPDATE usuarios SET puntos_saldo = puntos_saldo + ? WHERE id = ?",
+        [canje.puntos_usados, canje.usuario_id]);
+    }
+
+    await conn.commit();
+    res.json({ ok: true, estado });
+  } catch (err) {
+    await conn.rollback();
+    next(err);
+  } finally {
+    conn.release();
+  }
+});
+
 export default router;

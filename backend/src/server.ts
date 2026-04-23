@@ -32,7 +32,8 @@ app.use(cors({
 app.use(express.json());
 
 // ── Servir imágenes subidas estáticamente ─────────────────
-app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/api/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // ── Rate limiting: rutas de autenticación ─────────────────
 // Máx 15 intentos por IP cada 15 minutos (anti fuerza bruta)
