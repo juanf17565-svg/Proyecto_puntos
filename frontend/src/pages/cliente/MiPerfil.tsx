@@ -9,6 +9,7 @@ type ClienteMe = {
   nombre: string;
   email: string;
   dni: string | null;
+  telefono?: string | null;
   puntos_saldo: number;
   codigo_invitacion: string | null;
   referido_por: number | null;
@@ -27,6 +28,7 @@ type PerfilResponse = {
     email: string;
     rol: "cliente" | "vendedor" | "admin";
     dni: string | null;
+    telefono?: string | null;
     puntos_saldo: number;
     codigo_invitacion: string | null;
     referido_por: number | null;
@@ -67,6 +69,10 @@ function cleanDni(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+function cleanTelefono(value: string): string {
+  return value.replace(/[^0-9+\-()\s]/g, "");
+}
+
 function formatDate(value: string | null): string {
   if (!value) return "-";
   return new Date(value).toLocaleString("es-AR", {
@@ -94,12 +100,14 @@ export function MiPerfil() {
 
   const [nombre, setNombre] = useState("");
   const [dni, setDni] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [codigoInvitacionInput, setCodigoInvitacionInput] = useState("");
   const [perfilOk, setPerfilOk] = useState("");
   const [perfilErr, setPerfilErr] = useState("");
   const [codigoOk, setCodigoOk] = useState("");
   const [codigoErr, setCodigoErr] = useState("");
   const [canjeFilter, setCanjeFilter] = useState<CanjeFilter>("todos");
+  const [canjePage, setCanjePage] = useState(1);
   const codigoSectionRef = useRef<HTMLDivElement | null>(null);
   const misCanjesSectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -123,6 +131,7 @@ export function MiPerfil() {
     if (!me) return;
     setNombre(me.nombre || "");
     setDni(me.dni || "");
+    setTelefono(me.telefono || "");
   }, [meQuery.data]);
 
   useEffect(() => {
@@ -135,7 +144,7 @@ export function MiPerfil() {
   }, []);
 
   const guardarPerfilMutation = useMutation({
-    mutationFn: (payload: { nombre?: string; dni?: string }) =>
+    mutationFn: (payload: { nombre?: string; dni?: string; telefono?: string }) =>
       api.patch<PerfilResponse>("/cliente/perfil", payload),
     onSuccess: async (result) => {
       setPerfilErr("");
@@ -143,6 +152,7 @@ export function MiPerfil() {
       updateUser({
         nombre: result.user.nombre,
         dni: result.user.dni,
+        telefono: result.user.telefono || null,
       });
       await queryClient.invalidateQueries({ queryKey: ["cliente", "me"] });
     },
@@ -204,6 +214,18 @@ export function MiPerfil() {
     return canjes.filter((canje) => canje.estado === canjeFilter);
   }, [canjes, canjeFilter]);
 
+  const CANJES_PER_PAGE = 3;
+  const canjesTotalPages = Math.max(1, Math.ceil(canjesFiltrados.length / CANJES_PER_PAGE));
+  const canjesPaginaActual = useMemo(() => {
+    const currentPage = Math.min(canjePage, canjesTotalPages);
+    const start = (currentPage - 1) * CANJES_PER_PAGE;
+    return canjesFiltrados.slice(start, start + CANJES_PER_PAGE);
+  }, [canjesFiltrados, canjePage, canjesTotalPages]);
+
+  useEffect(() => {
+    setCanjePage(1);
+  }, [canjeFilter, canjes.length]);
+
   async function guardarPerfil() {
     if (!me) return;
 
@@ -212,7 +234,8 @@ export function MiPerfil() {
 
     const nombreLimpio = nombre.trim();
     const dniLimpio = cleanDni(dni.trim());
-    const payload: { nombre?: string; dni?: string } = {};
+    const telefonoLimpio = cleanTelefono(telefono.trim());
+    const payload: { nombre?: string; dni?: string; telefono?: string } = {};
 
     if (!nombreLimpio) {
       setPerfilErr("El nombre no puede quedar vacio.");
@@ -222,11 +245,16 @@ export function MiPerfil() {
       setPerfilErr("El DNI debe contener solo numeros (6 a 15 digitos).");
       return;
     }
+    if (telefonoLimpio && !/^[0-9+\-()\s]{7,25}$/.test(telefonoLimpio)) {
+      setPerfilErr("Telefono invalido.");
+      return;
+    }
 
     if (nombreLimpio !== (me.nombre || "")) payload.nombre = nombreLimpio;
     if (dniLimpio !== (me.dni || "")) payload.dni = dniLimpio;
+    if (telefonoLimpio !== (me.telefono || "")) payload.telefono = telefonoLimpio;
 
-    if (!payload.nombre && !payload.dni) {
+    if (!payload.nombre && !payload.dni && payload.telefono === undefined) {
       setPerfilOk("No hay cambios para guardar.");
       return;
     }
@@ -243,58 +271,156 @@ export function MiPerfil() {
   }
 
   return (
-    <section className="dashboard-section">
+    <section className="dashboard-section perfil-dashboard-section">
       <h1 className="ios-title mb-4">Mi perfil</h1>
 
-      <div className="ios-card p-5" style={{ borderLeft: "4px solid #D4621A" }}>
-        <p className="ios-label" style={{ paddingLeft: 0 }}>Datos obligatorios</p>
+      <div className="perfil-top-grid">
+        <div className="ios-card p-5" style={{ borderLeft: "4px solid #D4621A" }}>
+          <p className="ios-label" style={{ paddingLeft: 0 }}>Datos obligatorios</p>
 
-        <div style={{ display: "grid", gap: "0.75rem" }}>
-          <label className="ios-label" style={{ paddingLeft: 0, paddingBottom: 0 }}>Nombre</label>
-          <input
-            className="ios-input"
-            value={nombre}
-            onChange={(event) => setNombre(event.target.value)}
-            placeholder="Tu nombre completo"
-            maxLength={100}
-          />
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            <label className="ios-label" style={{ paddingLeft: 0, paddingBottom: 0 }}>Nombre</label>
+            <input
+              className="ios-input"
+              value={nombre}
+              onChange={(event) => setNombre(event.target.value)}
+              placeholder="Tu nombre completo"
+              maxLength={100}
+            />
 
-          <label className="ios-label" style={{ paddingLeft: 0, paddingBottom: 0 }}>Email</label>
-          <input className="ios-input" value={me?.email || ""} disabled />
+            <label className="ios-label" style={{ paddingLeft: 0, paddingBottom: 0 }}>Email</label>
+            <input className="ios-input" value={me?.email || ""} disabled />
 
-          <label className="ios-label" style={{ paddingLeft: 0, paddingBottom: 0 }}>
-            DNI (requerido para canjear)
-          </label>
-          <input
-            className="ios-input"
-            value={dni}
-            onChange={(event) => setDni(cleanDni(event.target.value))}
-            inputMode="numeric"
-            maxLength={15}
-            placeholder="Ej: 35111222"
-          />
+            <label className="ios-label" style={{ paddingLeft: 0, paddingBottom: 0 }}>
+              DNI (requerido para canjear)
+            </label>
+            <input
+              className="ios-input"
+              value={dni}
+              onChange={(event) => setDni(cleanDni(event.target.value))}
+              inputMode="numeric"
+              maxLength={15}
+              placeholder="Ej: 35111222"
+            />
+
+            <label className="ios-label" style={{ paddingLeft: 0, paddingBottom: 0 }}>Telefono</label>
+            <input
+              className="ios-input"
+              value={telefono}
+              onChange={(event) => setTelefono(cleanTelefono(event.target.value))}
+              inputMode="tel"
+              maxLength={25}
+              placeholder="Ej: +54 379 123-4567"
+            />
+          </div>
+
+          <button
+            className="ios-btn-primary mt-4"
+            onClick={() => {
+              void guardarPerfil();
+            }}
+            disabled={guardarPerfilMutation.isPending || meQuery.isLoading}
+          >
+            {guardarPerfilMutation.isPending ? "Guardando..." : "Guardar datos"}
+          </button>
+
+          {perfilOk ? (
+            <div className="status-ok-box">
+              <p>{perfilOk}</p>
+            </div>
+          ) : null}
+          {perfilErr ? (
+            <div className="status-err-box">
+              <p>{perfilErr}</p>
+            </div>
+          ) : null}
         </div>
 
-        <button
-          className="ios-btn-primary mt-4"
-          onClick={() => {
-            void guardarPerfil();
-          }}
-          disabled={guardarPerfilMutation.isPending || meQuery.isLoading}
+        <div
+          ref={codigoSectionRef}
+          id="codigo-invitacion"
+          className="ios-card p-5"
+          style={{ borderLeft: "4px solid #B85415", scrollMarginTop: "84px" }}
         >
-          {guardarPerfilMutation.isPending ? "Guardando..." : "Guardar datos"}
-        </button>
+          <p className="ios-label" style={{ paddingLeft: 0 }}>Codigo de invitacion</p>
 
-        {perfilOk ? (
-          <div className="status-ok-box">
-            <p>{perfilOk}</p>
+          <div className="status-ok-box" style={{ marginTop: "0.35rem" }}>
+            <p style={{ margin: 0 }}>
+              Tu codigo: <strong>{miCodigo?.codigo || me?.codigo_invitacion || "-"}</strong>
+            </p>
+            <p style={{ margin: "0.35rem 0 0" }}>
+              Invitados registrados: <strong>{miCodigo?.total_invitados ?? 0}</strong>
+            </p>
           </div>
-        ) : null}
-        {perfilErr ? (
-          <div className="status-err-box">
-            <p>{perfilErr}</p>
+
+          <p className="text-xs mt-3" style={{ color: "#A08060" }}>
+            Puedes usar un codigo de invitacion solo una vez por usuario.
+          </p>
+
+          {yaUsoCodigoInvitacion ? (
+            <div className="status-ok-box">
+              <p>Ya aplicaste un codigo de invitacion en tu cuenta.</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.75rem" }}>
+              <input
+                type="text"
+                className="ios-input"
+                value={codigoInvitacionInput}
+                onChange={(event) => setCodigoInvitacionInput(event.target.value.toUpperCase())}
+                placeholder="Ingresa codigo de invitacion"
+                style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, flex: 1 }}
+                disabled={usarCodigoInvitacionMutation.isPending}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+                  event.preventDefault();
+                  void aplicarCodigoInvitacion();
+                }}
+              />
+              <button
+                className="ios-btn-primary"
+                style={{
+                  width: "auto",
+                  padding: "0 1.25rem",
+                  borderRadius: "12px",
+                  fontSize: "0.9rem",
+                  whiteSpace: "nowrap",
+                }}
+                disabled={usarCodigoInvitacionMutation.isPending || !codigoInvitacionInput.trim()}
+                onClick={() => {
+                  void aplicarCodigoInvitacion();
+                }}
+              >
+                {usarCodigoInvitacionMutation.isPending ? "..." : "Aplicar"}
+              </button>
+            </div>
+          )}
+
+          {codigoOk ? (
+            <div className="status-ok-box">
+              <p>{codigoOk}</p>
+            </div>
+          ) : null}
+          {codigoErr ? (
+            <div className="status-err-box">
+              <p>{codigoErr}</p>
+            </div>
+          ) : null}
+
+          <div className="perfil-promo-box mt-6">
+            <p className="ios-label" style={{ paddingLeft: 0 }}>Codigo promocional</p>
+            <p className="text-sm" style={{ color: "#6b7280", marginTop: "0.25rem" }}>
+              Si tienes un codigo promocional, puedes canjearlo desde tu pantalla de puntos.
+            </p>
+            <Link
+              to="/cliente#canjear-codigo"
+              className="ios-btn-secondary"
+              style={{ display: "block", marginTop: "0.9rem", textAlign: "center", textDecoration: "none" }}
+            >
+              Ir a puntos
+            </Link>
           </div>
-        ) : null}
+        </div>
       </div>
 
       <div
@@ -314,16 +440,19 @@ export function MiPerfil() {
           </p>
         </div>
 
-        <div className="perfil-canje-filtros">
-          {CANJE_FILTERS.map((filter) => (
-            <button
-              key={filter.key}
-              className={`perfil-canje-filtro-btn${canjeFilter === filter.key ? " active" : ""}`}
-              onClick={() => setCanjeFilter(filter.key)}
-            >
-              {filter.label} ({canjeStats.counts[filter.key]})
-            </button>
-          ))}
+        <div className="perfil-canje-filter-row">
+          <label className="ios-label" style={{ paddingLeft: 0, paddingBottom: 0 }}>Estado</label>
+          <select
+            className="ios-input perfil-canje-select"
+            value={canjeFilter}
+            onChange={(event) => setCanjeFilter(event.target.value as CanjeFilter)}
+          >
+            {CANJE_FILTERS.map((filter) => (
+              <option key={filter.key} value={filter.key}>
+                {filter.label} ({canjeStats.counts[filter.key]})
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="ios-list" style={{ marginTop: "0.6rem", border: "1px solid #F0DBC5", borderRadius: "12px", overflow: "hidden" }}>
@@ -332,7 +461,7 @@ export function MiPerfil() {
             <div className="ios-row text-sm status-muted">No tienes canjes en este estado.</div>
           ) : null}
 
-          {canjesFiltrados.map((canje) => (
+          {canjesPaginaActual.map((canje) => (
             <div key={canje.id} className="px-4 py-3 border-b border-ios-gray6 last:border-0">
               <div className="flex items-start gap-3">
                 <img
@@ -372,92 +501,28 @@ export function MiPerfil() {
             </div>
           ))}
         </div>
-      </div>
 
-      <div
-        ref={codigoSectionRef}
-        id="codigo-invitacion"
-        className="ios-card p-5 mt-6"
-        style={{ borderLeft: "4px solid #B85415", scrollMarginTop: "84px" }}
-      >
-        <p className="ios-label" style={{ paddingLeft: 0 }}>Codigo de invitacion</p>
-
-        <div className="status-ok-box" style={{ marginTop: "0.35rem" }}>
-          <p style={{ margin: 0 }}>
-            Tu codigo: <strong>{miCodigo?.codigo || me?.codigo_invitacion || "-"}</strong>
-          </p>
-          <p style={{ margin: "0.35rem 0 0" }}>
-            Invitados registrados: <strong>{miCodigo?.total_invitados ?? 0}</strong>
-          </p>
-        </div>
-
-        <p className="text-xs mt-3" style={{ color: "#A08060" }}>
-          Puedes usar un codigo de invitacion solo una vez por usuario.
-        </p>
-
-        {yaUsoCodigoInvitacion ? (
-          <div className="status-ok-box">
-            <p>Ya aplicaste un codigo de invitacion en tu cuenta.</p>
-          </div>
-        ) : (
-          <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.75rem" }}>
-            <input
-              type="text"
-              className="ios-input"
-              value={codigoInvitacionInput}
-              onChange={(event) => setCodigoInvitacionInput(event.target.value.toUpperCase())}
-              placeholder="Ingresa codigo de invitacion"
-              style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, flex: 1 }}
-              disabled={usarCodigoInvitacionMutation.isPending}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                event.preventDefault();
-                void aplicarCodigoInvitacion();
-              }}
-            />
+        {!canjesQuery.isLoading && canjesFiltrados.length > 0 ? (
+          <div className="perfil-canje-pagination">
             <button
-              className="ios-btn-primary"
-              style={{
-                width: "auto",
-                padding: "0 1.25rem",
-                borderRadius: "12px",
-                fontSize: "0.9rem",
-                whiteSpace: "nowrap",
-              }}
-              disabled={usarCodigoInvitacionMutation.isPending || !codigoInvitacionInput.trim()}
-              onClick={() => {
-                void aplicarCodigoInvitacion();
-              }}
+              className="perfil-canje-page-btn"
+              disabled={canjePage <= 1}
+              onClick={() => setCanjePage((prev) => Math.max(prev - 1, 1))}
             >
-              {usarCodigoInvitacionMutation.isPending ? "..." : "Aplicar"}
+              Anterior
+            </button>
+            <span className="perfil-canje-page-label">
+              Pagina {Math.min(canjePage, canjesTotalPages)} de {canjesTotalPages}
+            </span>
+            <button
+              className="perfil-canje-page-btn"
+              disabled={canjePage >= canjesTotalPages}
+              onClick={() => setCanjePage((prev) => Math.min(prev + 1, canjesTotalPages))}
+            >
+              Siguiente
             </button>
           </div>
-        )}
-
-        {codigoOk ? (
-          <div className="status-ok-box">
-            <p>{codigoOk}</p>
-          </div>
         ) : null}
-        {codigoErr ? (
-          <div className="status-err-box">
-            <p>{codigoErr}</p>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="ios-card p-5 mt-6">
-        <p className="ios-label" style={{ paddingLeft: 0 }}>Codigo promocional</p>
-        <p className="text-sm" style={{ color: "#6b7280", marginTop: "0.25rem" }}>
-          Si tienes un codigo promocional, puedes canjearlo desde tu pantalla de puntos.
-        </p>
-        <Link
-          to="/cliente#canjear-codigo"
-          className="ios-btn-secondary"
-          style={{ display: "block", marginTop: "0.9rem", textAlign: "center", textDecoration: "none" }}
-        >
-          Ir a puntos
-        </Link>
       </div>
     </section>
   );

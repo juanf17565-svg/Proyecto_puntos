@@ -139,166 +139,170 @@ export function Catalogo() {
 
   return (
     <section className="catalog-page">
-      {isCliente ? (
-        <div className="catalog-user-banner">
-          <div>
-            <p>
-              Hola, <strong>{user.nombre}</strong>
-            </p>
-            <p style={{ fontSize: "0.8rem", color: "#A08060", marginTop: "0.15rem" }}>Tus puntos disponibles</p>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <p className="banner-pts">{user.puntos_saldo ?? 0}</p>
-            <p className="banner-pts-label">puntos</p>
-          </div>
+      <div className="catalog-top-shell">
+        <div className="catalog-header">
+          <h1 className="catalog-title">Catalogo de productos</h1>
+          <p className="catalog-subtitle">Canjea tus puntos por productos exclusivos Nande</p>
         </div>
-      ) : null}
 
-      <div className="catalog-header">
-        <h1 className="catalog-title">Catalogo de productos</h1>
-        <p className="catalog-subtitle">Canjea tus puntos por productos exclusivos Nande</p>
+        {isCliente ? (
+          <div className="catalog-user-banner">
+            <div>
+              <p>
+                Hola, <strong>{user.nombre}</strong>
+              </p>
+              <p style={{ fontSize: "0.8rem", color: "#A08060", marginTop: "0.15rem" }}>Tus puntos disponibles</p>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <p className="banner-pts">{user.puntos_saldo ?? 0}</p>
+              <p className="banner-pts-label">puntos</p>
+            </div>
+          </div>
+        ) : null}
+
       </div>
+      <div className="catalog-products-shell">
+        {!loading ? (
+          <div className="catalog-filters">
+            <div className="catalog-filter-dropdown" style={{ position: "relative" }}>
+              <select
+                className="catalog-dropdown-btn"
+                value={categoriaActiva}
+                onChange={(event) => setCategoriaActiva(event.target.value)}
+              >
+                <option value="">Todas las categorias</option>
+                {categorias.map((categoria) => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {!loading ? (
-        <div className="catalog-filters">
-          <div className="catalog-filter-dropdown" style={{ position: "relative" }}>
-            <select
-              className="catalog-dropdown-btn"
-              value={categoriaActiva}
-              onChange={(event) => setCategoriaActiva(event.target.value)}
+            <div className="catalog-filter-range">
+              <div className="catalog-filter-range-header">
+                <label className="catalog-filter-label">Puntos maximos</label>
+                <span className="catalog-filter-range-val">{maxPuntos} pts</span>
+              </div>
+              <input
+                type="range"
+                className="catalog-range-slider"
+                min={0}
+                max={puntosMax}
+                step={50}
+                value={maxPuntos}
+                onChange={(event) => setMaxPuntos(Number(event.target.value))}
+              />
+            </div>
+
+            <button
+              className="catalog-filter-clear"
+              onClick={() => {
+                setCategoriaActiva("");
+                setMaxPuntos(puntosMax);
+              }}
             >
-              <option value="">Todas las categorias</option>
-              {categorias.map((categoria) => (
-                <option key={categoria} value={categoria}>
-                  {categoria}
-                </option>
-              ))}
-            </select>
+              Limpiar
+            </button>
           </div>
+        ) : null}
 
-          <div className="catalog-filter-range">
-            <div className="catalog-filter-range-header">
-              <label className="catalog-filter-label">Puntos maximos</label>
-              <span className="catalog-filter-range-val">{maxPuntos} pts</span>
-            </div>
-            <input
-              type="range"
-              className="catalog-range-slider"
-              min={0}
-              max={puntosMax}
-              step={50}
-              value={maxPuntos}
-              onChange={(event) => setMaxPuntos(Number(event.target.value))}
-            />
-          </div>
-
-          <button
-            className="catalog-filter-clear"
-            onClick={() => {
-              setCategoriaActiva("");
-              setMaxPuntos(puntosMax);
-            }}
-          >
-            Limpiar
-          </button>
-        </div>
-      ) : null}
-
-      {loading ? (
-        <div className="catalog-grid">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="product-card">
-              <div className="product-card-placeholder" />
-              <div className="product-card-body">
-                <div className="catalog-skeleton" style={{ height: "1rem", borderRadius: "6px" }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="catalog-grid">
-          {productosFiltrados.length === 0 ? (
-            <div className="catalog-empty">
-              <h3>Sin productos disponibles</h3>
-              <p>Prueba con otros filtros.</p>
-            </div>
-          ) : null}
-
-          {productosFiltrados.map((producto) => (
-            <div key={producto.id} className="product-card">
-              {producto.imagen_url ? (
-                <img src={producto.imagen_url} alt={producto.nombre} className="product-card-img" />
-              ) : (
+        {loading ? (
+          <div className="catalog-grid">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="product-card">
                 <div className="product-card-placeholder" />
-              )}
-
-              {producto.categoria ? <span className="product-card-cat">{producto.categoria}</span> : null}
-
-              <div className="product-card-body">
-                <p className="product-card-name">{producto.nombre}</p>
-                <p className="product-card-desc">{producto.descripcion || "Producto disponible para canje."}</p>
-
-                <div className="product-card-points">
-                  <div className="product-card-row">
-                    <span>Puntos para canjear</span>
-                    <span className="cost">{producto.puntos_requeridos} pts</span>
-                  </div>
-                  {producto.puntos_acumulables ? (
-                    <>
-                      <div className="product-card-divider" />
-                      <div className="product-card-row">
-                        <span>Puntos que sumas al comprar</span>
-                        <span className="earn">+{producto.puntos_acumulables} pts</span>
-                      </div>
-                    </>
-                  ) : null}
+                <div className="product-card-body">
+                  <div className="catalog-skeleton" style={{ height: "1rem", borderRadius: "6px" }} />
                 </div>
-
-                <button
-                  className="product-card-btn product-card-btn-ver"
-                  onClick={() => { setProductoModal(producto); setImgZoomed(false); setPan({ x: 0, y: 0 }); setZoomOrigin("50% 50%"); }}
-                >
-                  Ver producto
-                </button>
-
-                {user ? (
-                  <button
-                    className="product-card-btn product-card-btn-canjear"
-                    style={{ marginTop: "0.5rem" }}
-                    disabled={canjearMutation.isPending}
-                    onClick={() => {
-                      if (user.rol !== "cliente") {
-                        setToast({
-                          msg: "Solo los clientes pueden canjear productos.",
-                          variant: "info",
-                          actionLabel: "Ir a login",
-                          onAction: () => navigate("/login"),
-                          dismissLabel: "Cerrar",
-                          autoHideMs: 7000,
-                        });
-                        return;
-                      }
-                      setToast({
-                        msg: `Canjear ${producto.nombre} por ${producto.puntos_requeridos} pts?`,
-                        variant: "confirm",
-                        actionLabel: "Confirmar canje",
-                        onAction: () => canjearMutation.mutate(producto.id),
-                        dismissLabel: "Cancelar",
-                      });
-                    }}
-                  >
-                    Canjear producto
-                  </button>
-                ) : (
-                  <Link to="/login" className="product-card-btn product-card-btn-login" style={{ marginTop: "0.5rem" }}>
-                    Iniciar sesion para canjear
-                  </Link>
-                )}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        ) : (
+          <div className="catalog-grid">
+            {productosFiltrados.length === 0 ? (
+              <div className="catalog-empty">
+                <h3>Sin productos disponibles</h3>
+                <p>Prueba con otros filtros.</p>
+              </div>
+            ) : null}
+
+            {productosFiltrados.map((producto) => (
+              <div key={producto.id} className="product-card">
+                {producto.imagen_url ? (
+                  <img src={producto.imagen_url} alt={producto.nombre} className="product-card-img" />
+                ) : (
+                  <div className="product-card-placeholder" />
+                )}
+
+                {producto.categoria ? <span className="product-card-cat">{producto.categoria}</span> : null}
+
+                <div className="product-card-body">
+                  <p className="product-card-name">{producto.nombre}</p>
+                  <p className="product-card-desc">{producto.descripcion || "Producto disponible para canje."}</p>
+
+                  <div className="product-card-points">
+                    <div className="product-card-row">
+                      <span>Puntos para canjear</span>
+                      <span className="cost">{producto.puntos_requeridos} pts</span>
+                    </div>
+                    {producto.puntos_acumulables ? (
+                      <>
+                        <div className="product-card-divider" />
+                        <div className="product-card-row">
+                          <span>Puntos que sumas al comprar</span>
+                          <span className="earn">+{producto.puntos_acumulables} pts</span>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+
+                  <button
+                    className="product-card-btn product-card-btn-ver"
+                    onClick={() => { setProductoModal(producto); setImgZoomed(false); setPan({ x: 0, y: 0 }); setZoomOrigin("50% 50%"); }}
+                  >
+                    Ver producto
+                  </button>
+
+                  {user ? (
+                    <button
+                      className="product-card-btn product-card-btn-canjear"
+                      style={{ marginTop: "0.5rem" }}
+                      disabled={canjearMutation.isPending}
+                      onClick={() => {
+                        if (user.rol !== "cliente") {
+                          setToast({
+                            msg: "Solo los clientes pueden canjear productos.",
+                            variant: "info",
+                            actionLabel: "Ir a login",
+                            onAction: () => navigate("/login"),
+                            dismissLabel: "Cerrar",
+                            autoHideMs: 7000,
+                          });
+                          return;
+                        }
+                        setToast({
+                          msg: `Canjear ${producto.nombre} por ${producto.puntos_requeridos} pts?`,
+                          variant: "confirm",
+                          actionLabel: "Confirmar canje",
+                          onAction: () => canjearMutation.mutate(producto.id),
+                          dismissLabel: "Cancelar",
+                        });
+                      }}
+                    >
+                      Canjear producto
+                    </button>
+                  ) : (
+                    <Link to="/login" className="product-card-btn product-card-btn-login" style={{ marginTop: "0.5rem" }}>
+                      Iniciar sesion para canjear
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       {toast ? (
         toast.variant === "confirm" ? (
           <div className="catalog-confirm-overlay" onClick={() => setToast(null)}>

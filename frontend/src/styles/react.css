@@ -239,6 +239,128 @@
   gap: 0.4rem;
 }
 
+.puntos-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.puntos-pagination {
+  margin-top: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.puntos-page-btn {
+  border: 1px solid #f0dbc5;
+  background: #fffaf5;
+  color: #8b5a30;
+  border-radius: 10px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.puntos-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.puntos-page-label {
+  font-size: 0.78rem;
+  color: #8b5a30;
+  font-weight: 600;
+}
+
+.perfil-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.perfil-promo-box {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #f0dbc5;
+  background: #fffaf5;
+}
+
+.perfil-canje-filter-row {
+  margin-top: 0.8rem;
+  display: grid;
+  grid-template-columns: minmax(0, 280px);
+  gap: 0.35rem;
+}
+
+.perfil-canje-select {
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+  font-size: 0.9rem;
+}
+
+.perfil-canje-pagination {
+  margin-top: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.perfil-canje-page-btn {
+  border: 1px solid #f0dbc5;
+  background: #fffaf5;
+  color: #8b5a30;
+  border-radius: 10px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.perfil-canje-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.perfil-canje-page-label {
+  font-size: 0.78rem;
+  color: #8b5a30;
+  font-weight: 600;
+}
+
+@media (min-width: 920px) {
+  .puntos-top-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .perfil-top-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .perfil-canje-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .perfil-canje-pagination {
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .puntos-pagination {
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+}
+
 .perfil-canje-filtro-btn {
   border: 1px solid #f0dbc5;
   background: #fffaf5;

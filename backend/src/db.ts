@@ -30,6 +30,18 @@ function isLegacyRedeemCode(code: string | null | undefined): boolean {
   return /^C0{2,}[A-Z0-9]*$/.test(code);
 }
 
+async function ensureUsuarioTelefonoSchema() {
+  const [colRows] = await pool.query(
+    `SELECT 1 FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'telefono'
+     LIMIT 1`
+  ) as [any[], any[]];
+
+  if (!colRows.length) {
+    await pool.query("ALTER TABLE usuarios ADD COLUMN telefono VARCHAR(25) NULL AFTER dni");
+  }
+}
+
 async function ensureCanjeRedeemCodeSchema() {
   // Agrega la columna si no existe, o expande a VARCHAR(50) para que quepan los updates
   const [colRows] = await pool.query(
@@ -86,6 +98,11 @@ pool
   .then(async (conn) => {
     console.log("✅ MySQL conectado");
     conn.release();
+    try {
+      await ensureUsuarioTelefonoSchema();
+    } catch (err: any) {
+      console.error("Migracion telefono:", err.message);
+    }
     try {
       await ensureCanjeRedeemCodeSchema();
     } catch (err: any) {

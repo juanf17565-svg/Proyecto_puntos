@@ -31,6 +31,7 @@ Almacena **todos** los usuarios del sistema: admins y clientes.
 | `password_hash` | VARCHAR(255) | No | — | Contraseña encriptada con bcrypt. **Nunca se devuelve al frontend** |
 | `rol` | ENUM | No | `'cliente'` | `'admin'` o `'cliente'`. Define qué puede hacer el usuario |
 | `dni` | VARCHAR(20) | **Sí** | NULL | Solo para clientes. Los admins no tienen DNI |
+| `telefono` | VARCHAR(25) | **Sí** | NULL | Teléfono opcional del usuario |
 | `puntos_saldo` | INT | No | `0` | Saldo actual de puntos. Se actualiza **siempre** junto con `movimientos_puntos` |
 | `codigo_invitacion` | VARCHAR(20) | **Sí** | NULL | Código único que cada cliente puede compartir para invitar amigos. Se genera automáticamente al registrarse. Los admins no tienen uno |
 | `referido_por` | INT FK | **Sí** | NULL | ID del cliente que lo invitó. Solo se setea **una vez** al registrarse. Un usuario solo puede ser invitado por una persona |

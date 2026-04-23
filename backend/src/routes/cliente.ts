@@ -11,6 +11,7 @@ type PerfilCanje = {
   nombre: string | null;
   email: string | null;
   dni: string | null;
+  telefono?: string | null;
   codigo_invitacion?: string | null;
   referido_por?: number | null;
   puntos_saldo?: number;
@@ -71,7 +72,7 @@ async function getReferralPointsConfig(conn: Queryable): Promise<{ pointsInvitad
 
 router.get("/me", async (req, res) => {
   const user = await qOne(pool,
-    "SELECT id, nombre, email, dni, puntos_saldo, codigo_invitacion, referido_por FROM usuarios WHERE id = ?",
+    "SELECT id, nombre, email, dni, telefono, puntos_saldo, codigo_invitacion, referido_por FROM usuarios WHERE id = ?",
     [req.user!.id]
   );
   res.json(user);
@@ -81,7 +82,8 @@ router.patch("/perfil", async (req, res) => {
   const schema = z.object({
     nombre: z.string().min(1).max(100).optional(),
     dni: z.string().regex(/^\d{6,15}$/, "El DNI debe contener solo numeros (6 a 15 digitos)").optional(),
-  }).refine((value) => value.nombre !== undefined || value.dni !== undefined, {
+    telefono: z.string().regex(/^[0-9+\-()\s]{7,25}$/, "Telefono invalido").optional(),
+  }).refine((value) => value.nombre !== undefined || value.dni !== undefined || value.telefono !== undefined, {
     message: "Debes enviar al menos un campo para actualizar",
   });
 
@@ -91,7 +93,7 @@ router.patch("/perfil", async (req, res) => {
     return;
   }
 
-  const { nombre, dni } = parsed.data;
+  const { nombre, dni, telefono } = parsed.data;
   const usuarioId = req.user!.id;
 
   const conn = await pool.getConnection();
@@ -132,14 +134,15 @@ router.patch("/perfil", async (req, res) => {
       conn,
       `UPDATE usuarios
        SET nombre = COALESCE(?, nombre),
-           dni = COALESCE(?, dni)
+           dni = COALESCE(?, dni),
+           telefono = COALESCE(?, telefono)
        WHERE id = ?`,
-      [nombre ?? null, dni ?? null, usuarioId]
+      [nombre ?? null, dni ?? null, telefono ?? null, usuarioId]
     );
 
     const updated = await qOne(
       conn,
-      "SELECT id, nombre, email, rol, dni, puntos_saldo, codigo_invitacion, referido_por FROM usuarios WHERE id = ?",
+      "SELECT id, nombre, email, rol, dni, telefono, puntos_saldo, codigo_invitacion, referido_por FROM usuarios WHERE id = ?",
       [usuarioId]
     );
 

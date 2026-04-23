@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     password_hash       VARCHAR(255)    NOT NULL,
     rol                 ENUM('admin','vendedor','cliente') NOT NULL DEFAULT 'cliente',
     dni                 VARCHAR(20)     NULL,
+    telefono            VARCHAR(25)     NULL,
     puntos_saldo        INT             NOT NULL DEFAULT 0,
     codigo_invitacion   VARCHAR(20)     NULL UNIQUE,
     referido_por        INT             NULL,

@@ -190,7 +190,7 @@ router.post("/register", async (req, res) => {
     await conn.commit();
 
     const u = await qOne(conn,
-      "SELECT id, nombre, email, rol, dni, puntos_saldo, codigo_invitacion FROM usuarios WHERE id = ?",
+      "SELECT id, nombre, email, rol, dni, telefono, puntos_saldo, codigo_invitacion FROM usuarios WHERE id = ?",
       [nuevoId]
     );
 
@@ -216,7 +216,7 @@ router.post("/login", loginPairLimiter, async (req, res) => {
   const { email, password } = parsed.data;
 
   const user = await qOne<any>(pool,
-    `SELECT id, nombre, email, rol, dni, puntos_saldo, codigo_invitacion, password_hash, activo
+    `SELECT id, nombre, email, rol, dni, telefono, puntos_saldo, codigo_invitacion, password_hash, activo
      FROM usuarios WHERE email = ?`,
     [email]
   );
@@ -278,14 +278,14 @@ router.post("/google", async (req, res) => {
     await conn.beginTransaction();
 
     let user = await qOne<any>(conn,
-      `SELECT id, nombre, email, rol, dni, puntos_saldo, codigo_invitacion, google_id, activo
+      `SELECT id, nombre, email, rol, dni, telefono, puntos_saldo, codigo_invitacion, google_id, activo
        FROM usuarios WHERE google_id = ?`,
       [googleId]
     );
 
     if (!user) {
       user = await qOne<any>(conn,
-        `SELECT id, nombre, email, rol, dni, puntos_saldo, codigo_invitacion, google_id, activo
+        `SELECT id, nombre, email, rol, dni, telefono, puntos_saldo, codigo_invitacion, google_id, activo
          FROM usuarios WHERE email = ?`,
         [email]
       );
@@ -320,7 +320,7 @@ router.post("/google", async (req, res) => {
       );
 
       user = await qOne<any>(conn,
-        `SELECT id, nombre, email, rol, dni, puntos_saldo, codigo_invitacion, google_id, activo
+        `SELECT id, nombre, email, rol, dni, telefono, puntos_saldo, codigo_invitacion, google_id, activo
          FROM usuarios WHERE id = ?`,
         [nuevoId]
       );

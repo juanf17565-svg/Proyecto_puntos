@@ -1,5 +1,6 @@
 ﻿import { useQuery } from "@tanstack/react-query";
 import { marked } from "marked";
+import { useEffect } from "react";
 import { api } from "../../api";
 
 type Pagina = {
@@ -9,6 +10,13 @@ type Pagina = {
 };
 
 export function SobreNosotros() {
+  useEffect(() => {
+    document.body.classList.add("catalog-background");
+    return () => {
+      document.body.classList.remove("catalog-background");
+    };
+  }, []);
+
   const paginaQuery = useQuery({
     queryKey: ["paginas", "sobre-nosotros"],
     queryFn: () => api.get<Pagina>("/paginas/sobre-nosotros"),

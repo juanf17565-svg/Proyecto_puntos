@@ -723,6 +723,8 @@
   margin: 0.6rem 0;
 }
 
+
+
 .adm-md-preview ul,
 .adm-md-preview ol {
   padding-left: 1.5rem;
@@ -787,6 +789,73 @@
 .admin-content::-webkit-scrollbar { width: 5px; }
 .admin-sidebar::-webkit-scrollbar-thumb,
 .admin-content::-webkit-scrollbar-thumb { background: rgba(180,84,20,0.2); border-radius: 4px; }
+
+/* ── Confirm Modal ── */
+.adm-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(45, 18, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.adm-modal {
+  background: #FFFFFF;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(45, 18, 0, 0.15);
+  text-align: center;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.adm-modal-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 1.5rem;
+}
+
+.adm-modal-icon.warning { background: #FEF3E8; color: #D4621A; }
+.adm-modal-icon.success { background: #E8F5E9; color: #16A34A; }
+
+.adm-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2D1200;
+  margin-bottom: 0.75rem;
+}
+
+.adm-modal-desc {
+  font-size: 0.95rem;
+  color: #8B5A30;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+}
+
+.adm-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 /* ════ RESPONSIVE ════ */
 

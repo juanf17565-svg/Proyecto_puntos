@@ -6,6 +6,7 @@ export type User = {
   email: string;
   rol: Rol;
   dni: string | null;
+  telefono?: string | null;
   puntos_saldo: number;
   codigo_invitacion: string | null;
   referido_por?: number | null;

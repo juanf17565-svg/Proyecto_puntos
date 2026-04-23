@@ -407,6 +407,14 @@
   box-sizing: border-box;
 }
 
+.perfil-dashboard-section {
+  max-width: 1120px;
+}
+
+.puntos-dashboard-section {
+  max-width: 1120px;
+}
+
 /* ---- FOOTER ---- */
 .footer {
   background: #3D1A02;          /* ← color de fondo del footer */

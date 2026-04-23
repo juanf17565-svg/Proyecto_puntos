@@ -79,7 +79,7 @@ router.get("/stats", async (_req, res) => {
 
 router.get("/usuarios", async (_req, res) => {
   const rows = await qAll(pool,
-    "SELECT id, nombre, email, rol, dni, puntos_saldo, codigo_invitacion, activo, created_at FROM usuarios ORDER BY created_at DESC"
+    "SELECT id, nombre, email, rol, dni, telefono, puntos_saldo, codigo_invitacion, activo, created_at FROM usuarios ORDER BY created_at DESC"
   );
   res.json(rows);
 });

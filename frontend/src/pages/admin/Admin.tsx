@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { marked } from "marked";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { api } from "../../api";
@@ -89,6 +89,13 @@ type Pagina = {
   slug: string;
   titulo: string;
   contenido: string;
+};
+
+type ConfirmacionCanje = {
+  id: number;
+  estado: "entregado" | "cancelado";
+  producto: string;
+  cliente: string;
 };
 
 type ProductoForm = {
@@ -197,6 +204,8 @@ export function Admin() {
     okMsg: "",
     errMsg: "",
   });
+
+  const [confirmacion, setConfirmacion] = useState<ConfirmacionCanje | null>(null);
 
   const statsQuery = useQuery({
     queryKey: ["admin", "stats"],
@@ -609,18 +618,37 @@ export function Admin() {
   }
 
   async function actualizarEstadoCanje(id: number, estado: "entregado" | "cancelado") {
-    if (!window.confirm(`Cambiar estado a ${estado}?`)) return;
     setErrMsg("");
+    setOkMsg("");
+    setBusy(true);
     try {
       await commandMutation.mutateAsync({
         method: "patch",
         path: `/admin/canjes/${id}`,
         body: { estado },
       });
+      
+      const msg = estado === "entregado" 
+        ? "¡Canje marcado como entregado!" 
+        : "Canje anulado correctamente. Los puntos han sido devueltos al cliente.";
+      setOkMsg(msg);
+      
       await refreshQueries([["admin", "canjes"], ["admin", "stats"]]);
     } catch (error) {
       setErrMsg((error as Error).message);
+    } finally {
+      setBusy(false);
+      setConfirmacion(null);
     }
+  }
+
+  function prepararConfirmacion(canje: CanjeAdmin, nuevoEstado: "entregado" | "cancelado") {
+    setConfirmacion({
+      id: canje.id,
+      estado: nuevoEstado,
+      producto: canje.producto_nombre,
+      cliente: canje.cliente_nombre
+    });
   }
 
   async function guardarPagina(slug: "sobre-nosotros" | "terminos") {
@@ -1139,10 +1167,10 @@ export function Admin() {
                           <td>
                             {canje.estado === "pendiente" ? (
                               <div style={{ display: "flex", gap: "0.4rem" }}>
-                                <button className="adm-btn-primary" style={{ padding: "0.35rem 0.55rem", fontSize: "0.75rem" }} onClick={() => actualizarEstadoCanje(canje.id, "entregado")}>
+                                <button className="adm-btn-success" style={{ padding: "0.35rem 0.55rem", fontSize: "0.75rem" }} onClick={() => prepararConfirmacion(canje, "entregado")}>
                                   Entregar
                                 </button>
-                                <button className="adm-btn-danger" style={{ padding: "0.35rem 0.55rem", fontSize: "0.75rem" }} onClick={() => actualizarEstadoCanje(canje.id, "cancelado")}>
+                                <button className="adm-btn-danger" style={{ padding: "0.35rem 0.55rem", fontSize: "0.75rem" }} onClick={() => prepararConfirmacion(canje, "cancelado")}>
                                   Anular
                                 </button>
                               </div>
@@ -1311,6 +1339,39 @@ export function Admin() {
           ) : null}
         </div>
       </main>
+
+      {/* ── MODAL DE CONFIRMACIÓN ── */}
+      {confirmacion && (
+        <div className="adm-modal-overlay">
+          <div className="adm-modal">
+            <div className={`adm-modal-icon ${confirmacion.estado === 'entregado' ? 'success' : 'warning'}`}>
+              {confirmacion.estado === 'entregado' ? '✅' : '⚠️'}
+            </div>
+            <h3 className="adm-modal-title">
+              {confirmacion.estado === 'entregado' ? '¿Confirmar entrega?' : '¿Anular este canje?'}
+            </h3>
+            <p className="adm-modal-desc">
+              {confirmacion.estado === 'entregado' 
+                ? `Estás por marcar como ENTREGADO el canje de "${confirmacion.producto}" para ${confirmacion.cliente}.`
+                : `Se anulará el canje de "${confirmacion.producto}" para ${confirmacion.cliente}. Los puntos se devolverán automáticamente al saldo del usuario.`
+              }
+            </p>
+            <div className="adm-modal-actions">
+              <button className="adm-btn-secondary" onClick={() => setConfirmacion(null)} disabled={busy}>
+                Cancelar
+              </button>
+              <button 
+                className={confirmacion.estado === 'entregado' ? 'adm-btn-primary' : 'adm-btn-primary'} 
+                style={{ background: confirmacion.estado === 'entregado' ? '#16A34A' : '#D4621A' }}
+                onClick={() => actualizarEstadoCanje(confirmacion.id, confirmacion.estado)}
+                disabled={busy}
+              >
+                {busy ? 'Procesando...' : confirmacion.estado === 'entregado' ? 'Confirmar entrega' : 'Confirmar anulación'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
