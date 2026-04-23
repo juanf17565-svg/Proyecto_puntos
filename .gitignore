@@ -1,12 +1,91 @@
-node_modules
-dist
+# ============================================================
+# .gitignore — solo se ignora lo que se regenera o es secreto.
+# Todo lo necesario para levantar el proyecto en otra máquina
+# (código, package.json, lock files, schema, configs, .env.example,
+#  docker-compose) queda versionado.
+# ============================================================
+
+# ── Dependencias (se regeneran con `npm install`) ────────────
+node_modules/
+**/node_modules/
+.pnpm-store/
+.npm/
+
+# ── Builds (se regeneran con `npm run build`) ────────────────
+dist/
+build/
+**/dist/
+**/build/
+*.tsbuildinfo
+.next/
+.turbo/
+.vite/
+.cache/
+
+# ── Secretos (NO versionar) ──────────────────────────────────
 .env
-.claude
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+# ...pero SÍ versionamos los templates
+!.env.example
+!**/.env.example
 
-frontend/node_modules
-frontend/dist
-frontend/yarn.lock
-backend/node_modules
-backend/dist
-backend/yarn.lock
+# ── Archivos subidos en runtime ──────────────────────────────
+# Imágenes de productos que sube el admin. No forman parte del
+# código; cada máquina/entorno genera los suyos. Mantenemos la
+# carpeta con un .gitkeep (ver backend/uploads/.gitkeep).
+backend/uploads/*
+!backend/uploads/.gitkeep
 
+# ── Base de datos local (SQLite, dumps) ──────────────────────
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+# Dumps manuales de MySQL (no los dumps del schema versionados)
+backend/data/
+mysql-data/
+
+# ── Logs y temporales ────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+.tmp/
+*.tmp
+
+# ── Gestores de paquetes no usados ───────────────────────────
+# Este repo usa npm (package-lock.json). Si alguien corre
+# yarn/pnpm, ignoramos sus lock para no ensuciar el repo.
+yarn.lock
+pnpm-lock.yaml
+
+# ── Editores / IDEs ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── SO ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ── Claude / herramientas de IA ──────────────────────────────
+.claude/
+memory/
+
+# ── Coverage y tests ─────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Varios ───────────────────────────────────────────────────
+*.pid
+*.seed

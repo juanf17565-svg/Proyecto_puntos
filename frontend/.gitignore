@@ -1,3 +1,5 @@
-node_modules
-dist
+# Reglas específicas del frontend. Las globales están en el .gitignore raíz.
+node_modules/
+dist/
 .env
+*.tsbuildinfo

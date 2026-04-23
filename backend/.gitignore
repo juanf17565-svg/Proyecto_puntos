@@ -1,4 +1,6 @@
-node_modules
-dist
-data
+# Reglas específicas del backend. Las globales están en el .gitignore raíz.
+# (Mantenido acá por claridad aunque el root ya cubre estos casos.)
+node_modules/
+dist/
 .env
+data/

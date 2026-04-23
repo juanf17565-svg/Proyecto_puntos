@@ -95,8 +95,8 @@ type ProductoForm = {
   nombre: string;
   descripcion: string;
   categoria: string;
-  puntos_requeridos: number;
-  puntos_acumulables: number | null;
+  puntos_requeridos: number | "";
+  puntos_acumulables: number | "";
   imagen_url: string;
   imagen_file: File | null;
   imagen_preview: string | null;
@@ -129,8 +129,8 @@ function emptyProductoForm(): ProductoForm {
     nombre: "",
     descripcion: "",
     categoria: "",
-    puntos_requeridos: 0,
-    puntos_acumulables: null,
+    puntos_requeridos: "",
+    puntos_acumulables: "",
     imagen_url: "",
     imagen_file: null,
     imagen_preview: null,
@@ -350,7 +350,8 @@ export function Admin() {
       return;
     }
 
-    if (!nuevoProducto.puntos_requeridos || nuevoProducto.puntos_requeridos <= 0) {
+    const puntosReq = Number(nuevoProducto.puntos_requeridos);
+    if (!Number.isFinite(puntosReq) || puntosReq <= 0) {
       setErrMsg("Los puntos requeridos deben ser mayores a 0.");
       return;
     }
@@ -370,8 +371,8 @@ export function Admin() {
           nombre: nuevoProducto.nombre.trim(),
           descripcion: nuevoProducto.descripcion || null,
           categoria: nuevoProducto.categoria || null,
-          puntos_requeridos: Number(nuevoProducto.puntos_requeridos),
-          puntos_acumulables: nuevoProducto.puntos_acumulables ? Number(nuevoProducto.puntos_acumulables) : null,
+          puntos_requeridos: puntosReq,
+          puntos_acumulables: nuevoProducto.puntos_acumulables !== "" ? Number(nuevoProducto.puntos_acumulables) : null,
           imagen_url: imagenUrl,
         },
       });
@@ -393,7 +394,7 @@ export function Admin() {
       descripcion: producto.descripcion || "",
       categoria: producto.categoria || "",
       puntos_requeridos: producto.puntos_requeridos,
-      puntos_acumulables: producto.puntos_acumulables,
+      puntos_acumulables: producto.puntos_acumulables ?? "",
       imagen_url: producto.imagen_url || "",
       imagen_file: null,
       imagen_preview: null,
@@ -419,7 +420,7 @@ export function Admin() {
           descripcion: editDraft.descripcion || null,
           categoria: editDraft.categoria || null,
           puntos_requeridos: Number(editDraft.puntos_requeridos),
-          puntos_acumulables: editDraft.puntos_acumulables ? Number(editDraft.puntos_acumulables) : null,
+          puntos_acumulables: editDraft.puntos_acumulables !== "" ? Number(editDraft.puntos_acumulables) : null,
           imagen_url: imagenUrl,
         },
       });
@@ -695,12 +696,6 @@ export function Admin() {
           <button className={`admin-nav-btn ${tab === "crear" ? "active" : ""}`} onClick={() => setTab("crear")}>
             Crear usuario
           </button>
-          <button className={`admin-nav-btn ${tab === "sobre-nosotros" ? "active" : ""}`} onClick={() => setTab("sobre-nosotros")}>
-            Quienes Somos
-          </button>
-          <button className={`admin-nav-btn ${tab === "terminos" ? "active" : ""}`} onClick={() => setTab("terminos")}>
-            Terminos
-          </button>
         </nav>
       </aside>
 
@@ -916,11 +911,33 @@ export function Admin() {
                 <div className="adm-form-grid">
                   <div className="adm-field">
                     <label className="adm-label">Puntos requeridos</label>
-                    <input type="number" className="adm-input" value={nuevoProducto.puntos_requeridos} onChange={(event) => setNuevoProducto((prev) => ({ ...prev, puntos_requeridos: Number(event.target.value) }))} />
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      className="adm-input"
+                      placeholder="Ej: 100"
+                      value={nuevoProducto.puntos_requeridos}
+                      onChange={(event) => {
+                        const v = event.target.value;
+                        setNuevoProducto((prev) => ({ ...prev, puntos_requeridos: v === "" ? "" : Number(v) }));
+                      }}
+                    />
                   </div>
                   <div className="adm-field">
                     <label className="adm-label">Puntos acumulables</label>
-                    <input type="number" className="adm-input" value={nuevoProducto.puntos_acumulables ?? ""} onChange={(event) => setNuevoProducto((prev) => ({ ...prev, puntos_acumulables: event.target.value ? Number(event.target.value) : null }))} />
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      className="adm-input"
+                      placeholder="Opcional"
+                      value={nuevoProducto.puntos_acumulables}
+                      onChange={(event) => {
+                        const v = event.target.value;
+                        setNuevoProducto((prev) => ({ ...prev, puntos_acumulables: v === "" ? "" : Number(v) }));
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -978,8 +995,30 @@ export function Admin() {
                         <textarea className="adm-input" value={editDraft.descripcion} onChange={(event) => setEditDraft((prev) => ({ ...prev, descripcion: event.target.value }))} />
 
                         <div className="adm-form-grid">
-                          <input type="number" className="adm-input" value={editDraft.puntos_requeridos} onChange={(event) => setEditDraft((prev) => ({ ...prev, puntos_requeridos: Number(event.target.value) }))} />
-                          <input type="number" className="adm-input" value={editDraft.puntos_acumulables ?? ""} onChange={(event) => setEditDraft((prev) => ({ ...prev, puntos_acumulables: event.target.value ? Number(event.target.value) : null }))} />
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            className="adm-input"
+                            placeholder="Puntos requeridos"
+                            value={editDraft.puntos_requeridos}
+                            onChange={(event) => {
+                              const v = event.target.value;
+                              setEditDraft((prev) => ({ ...prev, puntos_requeridos: v === "" ? "" : Number(v) }));
+                            }}
+                          />
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            className="adm-input"
+                            placeholder="Puntos acumulables"
+                            value={editDraft.puntos_acumulables}
+                            onChange={(event) => {
+                              const v = event.target.value;
+                              setEditDraft((prev) => ({ ...prev, puntos_acumulables: v === "" ? "" : Number(v) }));
+                            }}
+                          />
                         </div>
 
                         <input className="adm-input" value={editDraft.imagen_url} onChange={(event) => setEditDraft((prev) => ({ ...prev, imagen_url: event.target.value }))} />
