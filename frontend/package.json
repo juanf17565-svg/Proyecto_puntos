@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.3",
+    "@types/dompurify": "^3.0.5",
+    "dompurify": "^3.4.1",
     "marked": "^18.0.2",
     "proyecto-puntos": "file:..",
     "react": "^18.3.1",

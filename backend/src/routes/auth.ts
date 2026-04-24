@@ -14,18 +14,20 @@ const DEFAULT_INVITE_CODE_LENGTH = 9;
 const MIN_INVITE_CODE_LENGTH = 6;
 const MAX_INVITE_CODE_LENGTH = 20;
 
+// Política:
+// - Mínimo 12 caracteres (priorizamos longitud sobre "complejidad" artificial).
+// - Al menos una letra y un número (filtro mínimo contra "aaaaaaaaaaaa" y "123456789012").
+// - Máximo 128 para frenar DoS por hashing bcrypt.
 const strongPasswordSchema = z
   .string()
-  .min(8, "La contrasena debe tener al menos 8 caracteres")
-  .regex(/(?:.*\d){3,}/, "La contrasena debe incluir al menos 3 numeros")
-  .regex(
-    /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/,
-    "La contrasena debe incluir al menos 1 caracter especial",
-  );
+  .min(12, "La contrasena debe tener al menos 12 caracteres")
+  .max(128, "La contrasena no puede superar 128 caracteres")
+  .regex(/[A-Za-z]/, "La contrasena debe incluir al menos una letra")
+  .regex(/\d/, "La contrasena debe incluir al menos un numero");
 
 function makeCode(length: number): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return Array.from({ length }, () => chars[crypto.randomInt(chars.length)]).join("");
 }
 
 async function uniqueInviteCode(length: number): Promise<string> {

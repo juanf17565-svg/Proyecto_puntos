@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { marked } from "marked";
 import { Fragment, useEffect, useMemo, useState, type DragEvent } from "react";
 import { api } from "../../api";
 import { StaticPageGallery } from "../../components/StaticPageGallery";
-import { MAX_STATIC_PAGE_IMAGES, extractPageImageUrls, rebuildPageContent, stripPageImages } from "../../lib/pageContent";
+import { MAX_STATIC_PAGE_IMAGES, extractPageImageUrls, rebuildPageContent, renderSafeMarkdown, stripPageImages } from "../../lib/pageContent";
 import type { Producto } from "../../types";
 
 type AdminTab =
@@ -634,8 +633,8 @@ export function Admin() {
     [terminosDraft.contenido],
   );
 
-  const sobreHtml = useMemo(() => marked(stripPageImages(sobreDraft.contenido || "")), [sobreDraft.contenido]);
-  const terminosHtml = useMemo(() => marked(stripPageImages(terminosDraft.contenido || "")), [terminosDraft.contenido]);
+  const sobreHtml = useMemo(() => renderSafeMarkdown(stripPageImages(sobreDraft.contenido || "")), [sobreDraft.contenido]);
+  const terminosHtml = useMemo(() => renderSafeMarkdown(stripPageImages(terminosDraft.contenido || "")), [terminosDraft.contenido]);
 
   async function subirImagenProducto(file: File, target: "nuevo" | "edit") {
     if (!file) return;

@@ -1,4 +1,5 @@
-﻿import { Router } from "express";
+﻿import crypto from "crypto";
+import { Router } from "express";
 import { z } from "zod";
 import { pool, qOne, qAll, qRun, type Queryable } from "../db";
 import { requireAuth, requireRole } from "../auth";
@@ -38,7 +39,7 @@ const REDEEM_CODE_LENGTH = 9;
 const REDEEM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function makeRedeemCode(length = REDEEM_CODE_LENGTH): string {
-  return Array.from({ length }, () => REDEEM_CODE_CHARS[Math.floor(Math.random() * REDEEM_CODE_CHARS.length)]).join("");
+  return Array.from({ length }, () => REDEEM_CODE_CHARS[crypto.randomInt(REDEEM_CODE_CHARS.length)]).join("");
 }
 
 async function uniqueRedeemCode(conn: Queryable, length = REDEEM_CODE_LENGTH): Promise<string> {

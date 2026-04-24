@@ -1,4 +1,5 @@
 import path from "path";
+import crypto from "crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import multer from "multer";
@@ -11,10 +12,17 @@ const MIN_INVITE_CODE_LENGTH = 6;
 const MAX_INVITE_CODE_LENGTH = 20;
 
 // ── Configuración de multer para subida de imágenes ──────
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png":  ".png",
+  "image/webp": ".webp",
+};
+
 const storage = multer.diskStorage({
   destination: path.join(__dirname, "../../uploads"),
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = MIME_TO_EXT[file.mimetype];
+    if (!ext) return cb(new Error("Tipo de archivo no permitido"), "");
     cb(null, `${uuidv4()}-${Date.now()}${ext}`);
   },
 });
@@ -23,8 +31,7 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máx
   fileFilter: (_req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (allowed.includes(file.mimetype)) cb(null, true);
+    if (MIME_TO_EXT[file.mimetype]) cb(null, true);
     else cb(new Error("Solo se permiten imágenes JPG, PNG o WEBP"));
   },
 });
@@ -51,7 +58,7 @@ const sucursalSchema = z.object({
 
 function makeInviteCode(length: number): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return Array.from({ length }, () => chars[crypto.randomInt(chars.length)]).join("");
 }
 
 async function uniqueInviteCode(length: number): Promise<string> {

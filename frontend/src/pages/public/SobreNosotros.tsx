@@ -1,9 +1,8 @@
 ﻿import { useQuery } from "@tanstack/react-query";
-import { marked } from "marked";
 import { useEffect, useMemo } from "react";
 import { api } from "../../api";
 import { StaticPageGallery } from "../../components/StaticPageGallery";
-import { MAX_STATIC_PAGE_IMAGES, extractPageImageUrls, stripPageImages } from "../../lib/pageContent";
+import { MAX_STATIC_PAGE_IMAGES, extractPageImageUrls, renderSafeMarkdown, stripPageImages } from "../../lib/pageContent";
 
 type Pagina = {
   slug: string;
@@ -26,7 +25,7 @@ export function SobreNosotros() {
 
   const contenido = paginaQuery.data?.contenido || "";
   const imagenes = useMemo(() => extractPageImageUrls(contenido).slice(0, MAX_STATIC_PAGE_IMAGES), [contenido]);
-  const html = useMemo(() => marked(stripPageImages(contenido)), [contenido]);
+  const html = useMemo(() => renderSafeMarkdown(stripPageImages(contenido)), [contenido]);
 
   return (
     <section className="pagina-page">

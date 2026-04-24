@@ -1,4 +1,15 @@
+import DOMPurify from "dompurify";
+import { marked } from "marked";
+
 export const MAX_STATIC_PAGE_IMAGES = 4;
+
+// Parsea markdown y sanitiza el HTML resultante antes de renderizarlo.
+// Uso obligatorio donde se haga dangerouslySetInnerHTML con contenido
+// editable por admins: si el admin es comprometido, sin esto = XSS.
+export function renderSafeMarkdown(content: string): string {
+  const rawHtml = marked.parse(content, { async: false }) as string;
+  return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
+}
 
 const MARKDOWN_IMAGE_LINE_REGEX = /^!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)$/;
 

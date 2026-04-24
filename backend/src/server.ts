@@ -15,6 +15,13 @@ import paginasRoutes  from "./routes/paginas";
 
 const app = express();
 
+// ── Proxy: req.ip real cuando corremos detrás de Nginx/Docker/CF ──
+// Con un único hop de proxy; aumentar si hay más capas.
+const TRUST_PROXY = process.env.TRUST_PROXY;
+if (TRUST_PROXY) {
+  app.set("trust proxy", Number.isNaN(Number(TRUST_PROXY)) ? TRUST_PROXY : Number(TRUST_PROXY));
+}
+
 // ── Seguridad: headers HTTP seguros ───────────────────────
 app.use(helmet());
 
@@ -45,31 +52,17 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-import jwt from "jsonwebtoken";
-
-const SECRET = process.env.JWT_SECRET || "dev-secret-cambialo";
-
 // ── Rate limiting: API general ────────────────────────────
-// Máx 1000 requests por IP cada 15 minutos (excepto admins)
+// Máx 1000 requests por IP cada 15 minutos — aplica a todos los roles.
+// (Bypass por admin en base al JWT se quitó: un token robado/obsoleto no
+// debería saltarse el limiter, y validar "activo" en DB en cada request
+// agrega latencia innecesaria.)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 1000,
   message: { error: "Demasiadas solicitudes. Intentá en unos minutos." },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
-    // Si tiene token de admin, no se le aplica el rate limit
-    const header = req.headers.authorization;
-    if (header?.startsWith("Bearer ")) {
-      try {
-        const payload = jwt.verify(header.slice(7), SECRET) as any;
-        if (payload.rol === "admin") return true;
-      } catch (error) {
-        // Ignoramos error, el middleware de auth lo atrapará después
-      }
-    }
-    return false;
-  }
 });
 
 app.use("/api", generalLimiter);
