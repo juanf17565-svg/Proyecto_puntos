@@ -22,6 +22,7 @@ export type Producto = {
   nombre: string;
   descripcion: string | null;
   imagen_url: string | null;
+  imagenes?: string[];
   categoria: string | null;
   puntos_requeridos: number;
   puntos_acumulables: number | null;

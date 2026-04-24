@@ -1,6 +1,7 @@
 ﻿import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import { Footer } from "./components/Footer";
+import { FloatingWhatsApp } from "./components/FloatingWhatsApp";
 import { Navbar } from "./components/Navbar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { parseJwtExp } from "./lib/auth";
@@ -84,6 +85,7 @@ export default function App() {
         </main>
         <Footer />
       </div>
+      <FloatingWhatsApp />
     </>
   );
 }

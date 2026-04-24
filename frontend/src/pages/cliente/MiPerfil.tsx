@@ -52,6 +52,12 @@ type Canje = {
   created_at: string;
   producto_nombre: string;
   producto_imagen: string | null;
+  sucursal_id?: number | null;
+  sucursal_nombre?: string | null;
+  sucursal_direccion?: string | null;
+  sucursal_piso?: string | null;
+  sucursal_localidad?: string | null;
+  sucursal_provincia?: string | null;
 };
 
 type CanjeFilter = "todos" | Canje["estado"];
@@ -484,6 +490,19 @@ export function MiPerfil() {
                   <p className="text-xs mt-1" style={{ color: "#A08060" }}>
                     Puntos usados: <strong style={{ color: "#5D3A1A" }}>{canje.puntos_usados}</strong>
                   </p>
+                  {canje.sucursal_nombre ? (
+                    <p className="text-xs mt-1" style={{ color: "#A08060" }}>
+                      Retiro en:{" "}
+                      <strong style={{ color: "#5D3A1A" }}>
+                        {canje.sucursal_nombre}
+                        {" - "}
+                        {canje.sucursal_direccion}
+                        {canje.sucursal_piso ? `, Piso ${canje.sucursal_piso}` : ""}
+                        {canje.sucursal_localidad ? `, ${canje.sucursal_localidad}` : ""}
+                        {canje.sucursal_provincia ? `, ${canje.sucursal_provincia}` : ""}
+                      </strong>
+                    </p>
+                  ) : null}
                 </div>
               </div>
 

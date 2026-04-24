@@ -9,7 +9,7 @@ html, body {
 }
 
 body {
-  /* ← color de fondo general del cuerpo de la página con un gradiente suave */
+  /* Keep existing body background as requested */
   background: linear-gradient(135deg, #FDF6EE 0%, #F5E6D3 100%);
   background-attachment: fixed;
   color: #111827;
@@ -23,11 +23,14 @@ body {
 
 @layer components {
   .ios-card {
-    @apply bg-white rounded-2xl overflow-hidden;
+    @apply rounded-2xl overflow-hidden;
+    background: #FFF8F0;
+    border: 1px solid #E6D3B8;
+    box-shadow: 0 8px 24px rgba(74, 44, 26, 0.08);
   }
 
   .ios-list > * + * {
-    border-top: 0.5px solid rgba(60, 60, 67, 0.12);
+    border-top: 0.5px solid rgba(90, 62, 41, 0.16);
   }
 
   .ios-row {
@@ -35,15 +38,19 @@ body {
   }
 
   .ios-input {
-    /* ← estilos base de los inputs en vistas de dashboard */
-    @apply w-full bg-white rounded-xl px-4 py-3 text-base outline-none
-      border transition placeholder:text-[#C4A882];
-    border-color: #F0DBC5;      /* ← borde de los inputs en dashboard */
+    @apply w-full rounded-xl px-4 py-3 text-base outline-none border transition;
+    background: #FFFDF8;
+    border-color: #E6D3B8;
+    color: #4A2C1A;
   }
 
   .ios-input:focus {
-    border-color: #D4621A;      /* ← borde de los inputs enfocados en dashboard */
-    box-shadow: 0 0 0 3px rgba(212, 98, 26, 0.15);
+    border-color: #A86A3D;
+    box-shadow: 0 0 0 3px rgba(107, 62, 38, 0.14);
+  }
+
+  .ios-input::placeholder {
+    color: #9A7A5A;
   }
 
   .ios-btn {
@@ -52,21 +59,24 @@ body {
   }
 
   .ios-btn-primary {
-    /* ← botón primario en las vistas de dashboard */
-    background: #D4621A;        /* ← fondo del botón primario */
-    color: #ffffff;             /* ← color del texto del botón primario */
+    background: #6B3E26;
+    color: #ffffff;
     @apply ios-btn;
   }
 
   .ios-btn-primary:hover {
-    background: #B85415;        /* ← fondo hover del botón primario */
+    background: #A86A3D;
   }
 
   .ios-btn-secondary {
-    /* ← botón secundario en las vistas de dashboard */
-    background: #FEF3E8;        /* ← fondo del botón secundario */
-    color: #D4621A;             /* ← color del texto del botón secundario */
+    background: #FFF8F0;
+    color: #6B3E26;
+    border: 1.5px solid #6B3E26;
     @apply ios-btn;
+  }
+
+  .ios-btn-secondary:hover {
+    background: #F3E3D1;
   }
 
   .ios-btn-danger {
@@ -75,12 +85,12 @@ body {
 
   .ios-label {
     @apply text-xs uppercase tracking-wider px-4 pb-1;
-    color: #A08060;             /* ← color de las etiquetas de sección */
+    color: #7A5A3C;
   }
 
   .ios-title {
     @apply text-[34px] leading-tight font-bold tracking-tight;
-    color: #3D1A02;             /* ← color de los títulos principales en dashboard */
+    color: #3D1A02;
   }
 
   .ios-nav {
@@ -89,25 +99,24 @@ body {
 
   .ios-segmented {
     @apply flex rounded-xl p-1 gap-1;
-    background: #F5C8A8;        /* ← fondo del control segmentado */
+    background: #EFDFCC;
   }
 
   .ios-segmented button {
     @apply flex-1 py-1.5 text-sm font-medium rounded-lg transition;
-    color: #3D1A02;             /* ← color del texto de los botones del segmentado */
+    color: #3D1A02;
   }
 
   .ios-segmented button.active {
     @apply bg-white shadow-sm;
-    color: #D4621A;             /* ← color del botón activo del segmentado */
+    color: #6B3E26;
   }
 
-  /* ── Área de upload de imagen en admin ── */
   .admin-upload-area {
-    border: 2px dashed #F5C8A8;     /* ← borde del área de subida de imagen */
+    border: 2px dashed #E6D3B8;
     border-radius: 10px;
     padding: 0.75rem 1rem;
-    background: #FFFAF5;            /* ← fondo del área de subida */
+    background: #FFF8F0;
     transition: border-color 0.2s, background 0.2s;
     display: flex;
     align-items: center;
@@ -116,13 +125,13 @@ body {
   }
 
   .admin-upload-area:hover {
-    border-color: #D4621A;          /* ← borde hover del área de subida */
-    background: #FEF3E8;            /* ← fondo hover del área de subida */
+    border-color: #A86A3D;
+    background: #F7E9D8;
   }
 
   .ios-chevron::after {
     content: "";
     @apply inline-block w-2 h-2 border-r-2 border-b-2 rotate-[-45deg];
-    border-color: #C4A882;      /* ← color del ícono chevron */
+    border-color: #9A7A5A;
   }
 }

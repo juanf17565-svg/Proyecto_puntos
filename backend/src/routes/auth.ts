@@ -4,13 +4,15 @@ import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
-import { pool, qOne, qRun } from "../db";
+import { pool, qOne, qRun, type Queryable } from "../db";
 import { signToken } from "../auth";
 import { sendPasswordResetEmail } from "../services/email";
 
 const router = Router();
 const googleClient = new OAuth2Client();
-const INVITE_CODE_LENGTH = 9;
+const DEFAULT_INVITE_CODE_LENGTH = 9;
+const MIN_INVITE_CODE_LENGTH = 6;
+const MAX_INVITE_CODE_LENGTH = 20;
 
 const strongPasswordSchema = z
   .string()
@@ -57,12 +59,15 @@ function makeRandomPasswordHash(): Promise<string> {
   return bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
 }
 
-async function getInviteCodeLength(): Promise<number> {
-  return INVITE_CODE_LENGTH;
+async function getInviteCodeLength(conn: Queryable = pool): Promise<number> {
+  const row = await qOne<{ valor: string }>(conn, "SELECT valor FROM configuracion WHERE clave = 'longitud_codigo_invitacion' LIMIT 1");
+  const parsed = Number(row?.valor ?? DEFAULT_INVITE_CODE_LENGTH);
+  if (!Number.isInteger(parsed)) return DEFAULT_INVITE_CODE_LENGTH;
+  return Math.max(MIN_INVITE_CODE_LENGTH, Math.min(MAX_INVITE_CODE_LENGTH, parsed));
 }
 
-function isValidInviteCode(code: string): boolean {
-  return /^[A-Z0-9]{9}$/.test(code);
+function isValidInviteCode(code: string, length: number): boolean {
+  return new RegExp(`^[A-Z0-9]{${length}}$`).test(code);
 }
 
 function publicUser(user: any) {
@@ -114,10 +119,6 @@ router.post("/register", async (req, res) => {
   }
   const { nombre, email, password, dni, codigo_invitacion_usado } = parsed.data;
   const codigoInvitacionNormalizado = codigo_invitacion_usado?.trim().toUpperCase() || null;
-  if (codigoInvitacionNormalizado && !isValidInviteCode(codigoInvitacionNormalizado)) {
-    res.status(400).json({ error: "El codigo de invitacion debe tener 9 caracteres alfanumericos" });
-    return;
-  }
 
   const conn = await pool.getConnection();
   try {
@@ -129,7 +130,12 @@ router.post("/register", async (req, res) => {
       return;
     }
 
-    const longitud = await getInviteCodeLength();
+    const longitud = await getInviteCodeLength(conn);
+    if (codigoInvitacionNormalizado && !isValidInviteCode(codigoInvitacionNormalizado, longitud)) {
+      await conn.rollback();
+      res.status(400).json({ error: `El codigo de invitacion debe tener ${longitud} caracteres alfanumericos` });
+      return;
+    }
     const codigoPropio = await uniqueInviteCode(longitud);
 
     const hash = await bcrypt.hash(password, 10);
@@ -309,7 +315,7 @@ router.post("/google", async (req, res) => {
     }
 
     if (!user) {
-      const longitud = await getInviteCodeLength();
+      const longitud = await getInviteCodeLength(conn);
       const codigoPropio = await uniqueInviteCode(longitud);
       const hash = await makeRandomPasswordHash();
 

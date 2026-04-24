@@ -28,6 +28,12 @@ type CanjeInfo = {
   cliente_nombre: string;
   cliente_dni: string;
   producto_nombre: string;
+  sucursal_id?: number | null;
+  sucursal_nombre?: string | null;
+  sucursal_direccion?: string | null;
+  sucursal_piso?: string | null;
+  sucursal_localidad?: string | null;
+  sucursal_provincia?: string | null;
 };
 
 export function Vendedor() {
@@ -213,11 +219,12 @@ export function Vendedor() {
     : false;
 
   return (
-    <section className="dashboard-section">
-
-      {/* ── PROCESAR CANJE ── */}
-      <h1 className="ios-title mb-4">Procesar canje</h1>
-      <div className="ios-card p-4" style={{ borderLeft: "4px solid #D4621A" }}>
+    <section className="dashboard-section vendedor-dashboard-section">
+      <div className="vendedor-top-grid">
+        <div className="vendedor-col">
+          {/* ── PROCESAR CANJE ── */}
+          <h1 className="ios-title mb-4">Procesar canje</h1>
+          <div className="ios-card p-4" style={{ borderLeft: "4px solid #D4621A" }}>
         <p className="text-sm mb-3" style={{ color: "#6b7280" }}>
           Ingresá el código que te muestra el cliente para validar su canje.
         </p>
@@ -244,13 +251,21 @@ export function Vendedor() {
         {canjeErr ? <div className="status-err-box mt-3"><p>{canjeErr}</p></div> : null}
         {canjeOk  ? <div className="status-ok-box mt-3"><p>{canjeOk}</p></div>  : null}
 
-        {canjeInfo ? (
-          <div className="mt-4 rounded-xl p-4" style={{ background: "#FEF3E8", border: "1px solid #F5C8A8" }}>
+            {canjeInfo ? (
+              <div className="mt-4 rounded-xl p-4" style={{ background: "#FEF3E8", border: "1px solid #F5C8A8" }}>
             <p className="text-xs uppercase font-bold tracking-wider mb-2" style={{ color: "#A08060" }}>Detalle del canje</p>
             <div style={{ display: "grid", gap: "0.3rem" }}>
               <p className="text-sm"><strong>Producto:</strong> {canjeInfo.producto_nombre}</p>
               <p className="text-sm"><strong>Cliente:</strong> {canjeInfo.cliente_nombre} — DNI {canjeInfo.cliente_dni}</p>
               <p className="text-sm"><strong>Puntos:</strong> {canjeInfo.puntos_usados} pts</p>
+              {canjeInfo.sucursal_nombre ? (
+                <p className="text-sm">
+                  <strong>Sucursal:</strong> {canjeInfo.sucursal_nombre} - {canjeInfo.sucursal_direccion}
+                  {canjeInfo.sucursal_piso ? `, Piso ${canjeInfo.sucursal_piso}` : ""}
+                  {canjeInfo.sucursal_localidad ? `, ${canjeInfo.sucursal_localidad}` : ""}
+                  {canjeInfo.sucursal_provincia ? `, ${canjeInfo.sucursal_provincia}` : ""}
+                </p>
+              ) : null}
               <p className="text-sm">
                 <strong>Estado:</strong>{" "}
                 <span style={{ color: canjeInfo.estado === "pendiente" ? "#D4621A" : canjeInfo.estado === "entregado" ? "#16a34a" : "#dc2626", fontWeight: 700 }}>
@@ -296,16 +311,18 @@ export function Vendedor() {
                 Este canje ya no puede modificarse.
               </p>
             )}
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </div>
+        </div>
 
-      {/* ── CARGAR PUNTOS ── */}
-      <h1 className="ios-title mt-8 mb-4">Cargar puntos</h1>
+        <div className="vendedor-col">
+          {/* ── CARGAR PUNTOS ── */}
+          <h1 className="ios-title mb-4">Cargar puntos</h1>
 
-      <p className="ios-label">Cliente</p>
+          <p className="ios-label">Cliente</p>
 
-      <div ref={buscadorClienteRef} style={{ position: "relative", marginBottom: "0.5rem" }}>
+          <div ref={buscadorClienteRef} style={{ position: "relative", marginBottom: "0.5rem" }}>
         <input
           className="ios-input"
           placeholder="Nombre o DNI del cliente..."
@@ -342,10 +359,10 @@ export function Vendedor() {
             ))}
           </div>
         ) : null}
-      </div>
+          </div>
 
-      {cliente ? (
-        <div className="ios-card p-4" style={{ marginBottom: "0.5rem" }}>
+          {cliente ? (
+            <div className="ios-card p-4" style={{ marginBottom: "0.5rem" }}>
           <div className="flex justify-between items-center">
             <div>
               <p className="text-base font-bold" style={{ color: "#D4621A" }}>
@@ -366,17 +383,17 @@ export function Vendedor() {
               Cambiar
             </button>
           </div>
-        </div>
-      ) : null}
+            </div>
+          ) : null}
 
-      <p className="ios-label mt-6">Catalogo</p>
-      <input
-        className="ios-input mb-2"
-        placeholder="Buscar producto..."
-        value={filtro}
-        onChange={(event) => setFiltro(event.target.value)}
-      />
-      <div className="ios-card ios-list max-h-80 overflow-y-auto">
+          <p className="ios-label mt-6">Catalogo</p>
+          <input
+            className="ios-input mb-2"
+            placeholder="Buscar producto..."
+            value={filtro}
+            onChange={(event) => setFiltro(event.target.value)}
+          />
+          <div className="ios-card ios-list max-h-80 overflow-y-auto">
         {productosFiltrados.length === 0 ? <div className="ios-row text-ios-secondary text-sm">Sin productos.</div> : null}
         {productosFiltrados.map((producto) => (
           <button key={producto.id} type="button" onClick={() => add(producto.id)} className="vendedor-producto-item">
@@ -389,12 +406,12 @@ export function Vendedor() {
             <span className="text-[#D4621A] text-xl leading-none">+</span>
           </button>
         ))}
-      </div>
+          </div>
 
-      {cartItems.length > 0 ? (
-        <>
-          <p className="ios-label mt-6">Carrito</p>
-          <div className="ios-card ios-list">
+          {cartItems.length > 0 ? (
+            <>
+              <p className="ios-label mt-6">Carrito</p>
+              <div className="ios-card ios-list">
             {cartItems.map((item) => (
               <div key={item.id} className="ios-row">
                 <div className="min-w-0">
@@ -412,51 +429,52 @@ export function Vendedor() {
                 </div>
               </div>
             ))}
-          </div>
+              </div>
 
-          <div className="ios-card mt-3 p-4 flex items-center justify-between">
+              <div className="ios-card mt-3 p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-ios-secondary">Puntos totales a cargar</p>
             </div>
             <div className="text-right">
               <p className="text-xl font-bold text-ios-green">+{totalPuntos}</p>
             </div>
+              </div>
+            </>
+          ) : null}
+
+          <div className="mt-6 space-y-3">
+            <input
+              className="ios-input"
+              placeholder="Descripcion (opcional)"
+              value={descripcion}
+              onChange={(event) => setDescripcion(event.target.value)}
+              disabled={!cliente}
+            />
+
+            {error ? <p className="text-ios-red text-sm">{error}</p> : null}
+            {ok ? <p className="text-ios-green text-sm font-medium">{ok}</p> : null}
+
+            <button
+              type="button"
+              className="ios-btn-primary"
+              disabled={cargarMutation.isPending || !cliente || cartItems.length === 0}
+              onClick={() => {
+                setError("");
+                setOk("");
+                cargarMutation.mutate();
+              }}
+            >
+              {cargarMutation.isPending ? "Cargando..." : "Cargar puntos"}
+            </button>
+
+            {cartItems.length > 0 ? (
+              <button type="button" className="ios-btn-secondary" onClick={clear}>
+                Vaciar carrito
+              </button>
+            ) : null}
           </div>
-        </>
-      ) : null}
-
-      <div className="mt-6 space-y-3">
-        <input
-          className="ios-input"
-          placeholder="Descripcion (opcional)"
-          value={descripcion}
-          onChange={(event) => setDescripcion(event.target.value)}
-          disabled={!cliente}
-        />
-
-        {error ? <p className="text-ios-red text-sm">{error}</p> : null}
-        {ok ? <p className="text-ios-green text-sm font-medium">{ok}</p> : null}
-
-        <button
-          type="button"
-          className="ios-btn-primary"
-          disabled={cargarMutation.isPending || !cliente || cartItems.length === 0}
-          onClick={() => {
-            setError("");
-            setOk("");
-            cargarMutation.mutate();
-          }}
-        >
-          {cargarMutation.isPending ? "Cargando..." : "Cargar puntos"}
-        </button>
-
-        {cartItems.length > 0 ? (
-          <button type="button" className="ios-btn-secondary" onClick={clear}>
-            Vaciar carrito
-          </button>
-        ) : null}
+        </div>
       </div>
     </section>
   );
 }
-

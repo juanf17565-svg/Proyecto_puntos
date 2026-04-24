@@ -24,6 +24,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS canjes;
+DROP TABLE IF EXISTS sucursales;
 DROP TABLE IF EXISTS referidos;
 DROP TABLE IF EXISTS usos_codigos;
 DROP TABLE IF EXISTS codigos_puntos;
@@ -31,6 +32,7 @@ DROP TABLE IF EXISTS password_reset_tokens;
 DROP TABLE IF EXISTS categorias;
 DROP TABLE IF EXISTS paginas_contenido;
 DROP TABLE IF EXISTS configuracion;
+DROP TABLE IF EXISTS producto_imagenes;
 DROP TABLE IF EXISTS productos;
 DROP TABLE IF EXISTS usuarios;
 
@@ -108,6 +110,24 @@ CREATE TABLE IF NOT EXISTS productos (
 );
 
 -- ============================================================
+-- TABLA: producto_imagenes
+-- Hasta 3 imagenes por producto ordenadas (1..3).
+-- ============================================================
+CREATE TABLE IF NOT EXISTS producto_imagenes (
+    id                  INT             PRIMARY KEY AUTO_INCREMENT,
+    producto_id         INT             NOT NULL,
+    imagen_url          VARCHAR(255)    NOT NULL,
+    orden               TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_producto_imagenes_producto
+        FOREIGN KEY (producto_id) REFERENCES productos(id)
+        ON DELETE CASCADE,
+    CONSTRAINT uq_producto_imagen_orden
+        UNIQUE (producto_id, orden)
+);
+
+-- ============================================================
 -- TABLA: codigos_puntos
 -- Códigos generados por el admin con valor en puntos.
 -- usos_maximos = 0 significa ilimitado.
@@ -169,6 +189,23 @@ CREATE TABLE IF NOT EXISTS referidos (
 );
 
 -- ============================================================
+-- TABLA: sucursales
+-- Sucursales físicas donde se retiran canjes.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS sucursales (
+    id                  INT             PRIMARY KEY AUTO_INCREMENT,
+    nombre              VARCHAR(120)    NOT NULL,
+    direccion           VARCHAR(180)    NOT NULL,
+    piso                VARCHAR(30)     NULL,
+    localidad           VARCHAR(120)    NOT NULL,
+    provincia           VARCHAR(120)    NOT NULL,
+    activo              TINYINT(1)      NOT NULL DEFAULT 1,
+    created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                        ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- ============================================================
 -- TABLA: canjes
 -- Solicitudes de canje de puntos por productos.
 --
@@ -183,6 +220,7 @@ CREATE TABLE IF NOT EXISTS canjes (
     id                  INT             PRIMARY KEY AUTO_INCREMENT,
     usuario_id          INT             NOT NULL,
     producto_id         INT             NOT NULL,
+    sucursal_id         INT             NULL,
     codigo_retiro       VARCHAR(9)      NOT NULL UNIQUE,
     puntos_usados       INT             NOT NULL,
     estado              ENUM('pendiente','entregado','no_disponible','expirado','cancelado')
@@ -196,7 +234,10 @@ CREATE TABLE IF NOT EXISTS canjes (
     CONSTRAINT fk_canje_usuario
         FOREIGN KEY (usuario_id)  REFERENCES usuarios(id),
     CONSTRAINT fk_canje_producto
-        FOREIGN KEY (producto_id) REFERENCES productos(id)
+        FOREIGN KEY (producto_id) REFERENCES productos(id),
+    CONSTRAINT fk_canje_sucursal
+        FOREIGN KEY (sucursal_id) REFERENCES sucursales(id)
+        ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -282,9 +323,21 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
         'Puntos que recibe el nuevo usuario al registrarse con un código'),
     ('dias_limite_retiro', '7',
         'Días que tiene el cliente para retirar un producto canjeado'),
+    ('lugar_retiro_canje', 'Corrientes, Argentina',
+        'Lugar físico donde el cliente debe retirar productos canjeados'),
     ('longitud_codigo_invitacion', '9',
         'Longitud del código de invitación generado automáticamente')
 ON DUPLICATE KEY UPDATE valor = VALUES(valor);
+
+INSERT INTO sucursales (nombre, direccion, piso, localidad, provincia, activo)
+SELECT
+  'Sucursal principal',
+  'Corrientes 1234',
+  NULL,
+  'Corrientes',
+  'Corrientes',
+  1
+WHERE NOT EXISTS (SELECT 1 FROM sucursales);
 
 -- ============================================================
 -- SEED: páginas de contenido

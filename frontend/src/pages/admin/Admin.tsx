@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { marked } from "marked";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type DragEvent } from "react";
 import { api } from "../../api";
+import { StaticPageGallery } from "../../components/StaticPageGallery";
+import { MAX_STATIC_PAGE_IMAGES, extractPageImageUrls, rebuildPageContent, stripPageImages } from "../../lib/pageContent";
 import type { Producto } from "../../types";
 
 type AdminTab =
@@ -30,6 +32,7 @@ type Usuario = {
   email: string;
   rol: "cliente" | "vendedor" | "admin";
   dni: string | null;
+  telefono?: string | null;
   puntos_saldo: number;
   codigo_invitacion: string | null;
   activo: boolean;
@@ -83,12 +86,43 @@ type CanjeAdmin = {
   cliente_email: string;
   cliente_dni: string;
   producto_nombre: string;
+  sucursal_id?: number | null;
+  sucursal_nombre?: string | null;
+  sucursal_direccion?: string | null;
+  sucursal_piso?: string | null;
+  sucursal_localidad?: string | null;
+  sucursal_provincia?: string | null;
 };
 
 type Pagina = {
   slug: string;
   titulo: string;
   contenido: string;
+};
+
+type ConfiguracionItem = {
+  clave: string;
+  valor: string;
+  descripcion: string | null;
+};
+
+type ConfiguracionDraft = {
+  dias_limite_retiro: string;
+  puntos_referido_invitador: string;
+  puntos_referido_invitado: string;
+  longitud_codigo_invitacion: string;
+};
+
+type SucursalAdmin = {
+  id: number;
+  nombre: string;
+  direccion: string;
+  piso: string | null;
+  localidad: string;
+  provincia: string;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 type ConfirmacionCanje = {
@@ -104,9 +138,15 @@ type ProductoForm = {
   categoria: string;
   puntos_requeridos: number;
   puntos_acumulables: number | null;
-  imagen_url: string;
-  imagen_file: File | null;
-  imagen_preview: string | null;
+  imagenes: string[];
+};
+
+type UsuarioEditDraft = {
+  nombre: string;
+  email: string;
+  rol: "cliente" | "vendedor" | "admin";
+  dni: string;
+  telefono: string;
 };
 
 type EditorDraft = {
@@ -115,6 +155,20 @@ type EditorDraft = {
   okMsg: string;
   errMsg: string;
 };
+
+type SucursalForm = {
+  nombre: string;
+  direccion: string;
+  piso: string;
+  localidad: string;
+  provincia: string;
+};
+
+type StaticPageSlug = "sobre-nosotros" | "terminos";
+
+const MOVIMIENTOS_INICIO_POR_PAGINA = 5;
+const LISTA_POR_PAGINA = 5;
+const MAX_PRODUCT_IMAGES = 3;
 
 function formatDate(value: string | null): string {
   if (!value) return "-";
@@ -131,6 +185,36 @@ function getCanjeCode(canje: Pick<CanjeAdmin, "id" | "codigo_retiro">): string {
   return canje.codigo_retiro;
 }
 
+function formatMovimientoTipo(tipo: string): string {
+  const labels: Record<string, string> = {
+    asignacion_manual: "Asignación manual",
+    codigo_canje: "Canje de código",
+    referido_invitador: "Puntos por invitar",
+    referido_invitado: "Puntos por registro referido",
+    canje_producto: "Canje de producto",
+    devolucion_canje: "Devolución por canje",
+    ajuste: "Ajuste",
+  };
+  return labels[tipo] ?? tipo.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatRolLabel(rol: Usuario["rol"]): string {
+  if (rol === "admin") return "Administrador";
+  if (rol === "vendedor") return "Vendedor";
+  return "Cliente";
+}
+
+function formatEstadoCanje(estado: string): string {
+  const labels: Record<string, string> = {
+    pendiente: "Pendiente",
+    entregado: "Entregado",
+    no_disponible: "No disponible",
+    expirado: "Expirado",
+    cancelado: "Cancelado",
+  };
+  return labels[estado] ?? estado.replace(/_/g, " ");
+}
+
 function emptyProductoForm(): ProductoForm {
   return {
     nombre: "",
@@ -138,24 +222,70 @@ function emptyProductoForm(): ProductoForm {
     categoria: "",
     puntos_requeridos: 0,
     puntos_acumulables: null,
-    imagen_url: "",
-    imagen_file: null,
-    imagen_preview: null,
+    imagenes: [],
   };
 }
 
-function uploadPreview(file: File, onDone: (url: string) => void) {
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    onDone(String(event.target?.result || ""));
+function normalizeImageList(urls: string[]): string[] {
+  return urls
+    .map((url) => url.trim())
+    .filter((url) => Boolean(url))
+    .slice(0, MAX_PRODUCT_IMAGES);
+}
+
+function emptySucursalForm(): SucursalForm {
+  return {
+    nombre: "",
+    direccion: "",
+    piso: "",
+    localidad: "",
+    provincia: "",
   };
-  reader.readAsDataURL(file);
 }
 
 function SectionTitle({ title }: { title: string }) {
   return (
     <div className="admin-section-header">
       <h2 className="admin-section-title">{title}</h2>
+    </div>
+  );
+}
+
+function FieldLabel({ text, tip }: { text: string; tip: string }) {
+  return (
+    <label className="adm-label">
+      {text}
+      <span className="adm-tip" data-tip={tip}>
+        ?
+      </span>
+    </label>
+  );
+}
+
+function PaginationControls({
+  page,
+  totalPages,
+  onPrev,
+  onNext,
+}: {
+  page: number;
+  totalPages: number;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="admin-pagination">
+      <button className="admin-page-btn" onClick={onPrev} disabled={page <= 1}>
+        Anterior
+      </button>
+      <span className="admin-page-label">
+        Pagina {page} de {totalPages}
+      </span>
+      <button className="admin-page-btn" onClick={onNext} disabled={page >= totalPages}>
+        Siguiente
+      </button>
     </div>
   );
 }
@@ -171,6 +301,15 @@ export function Admin() {
   const [nuevoProducto, setNuevoProducto] = useState<ProductoForm>(emptyProductoForm());
   const [editId, setEditId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<ProductoForm>(emptyProductoForm());
+  const [editUsuarioId, setEditUsuarioId] = useState<number | null>(null);
+  const [editUsuarioDraft, setEditUsuarioDraft] = useState<UsuarioEditDraft>({
+    nombre: "",
+    email: "",
+    rol: "cliente",
+    dni: "",
+    telefono: "",
+  });
+  const [adminHint, setAdminHint] = useState("");
 
   const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: "" });
   const [nuevoCodigo, setNuevoCodigo] = useState({
@@ -183,14 +322,35 @@ export function Admin() {
     email: "",
     password: "",
     nombre: "",
-    rol: "vendedor",
+    rol: "vendedor" as "cliente" | "vendedor" | "admin",
     dni: "",
   });
   const [busquedaUsuarios, setBusquedaUsuarios] = useState("");
   const [busquedaProductos, setBusquedaProductos] = useState("");
+  const [movimientosInicioPage, setMovimientosInicioPage] = useState(1);
+  const [usuariosPage, setUsuariosPage] = useState(1);
+  const [productosPage, setProductosPage] = useState(1);
+  const [categoriasPage, setCategoriasPage] = useState(1);
+  const [transaccionesPage, setTransaccionesPage] = useState(1);
+  const [canjesPage, setCanjesPage] = useState(1);
+  const [codigosPage, setCodigosPage] = useState(1);
+  const [sucursalesPage, setSucursalesPage] = useState(1);
   const [asignacionUsuarioId, setAsignacionUsuarioId] = useState<number | null>(null);
   const [asignacionPuntos, setAsignacionPuntos] = useState("100");
   const [asignacionDescripcion, setAsignacionDescripcion] = useState("");
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [configBusy, setConfigBusy] = useState(false);
+  const [configMsg, setConfigMsg] = useState("");
+  const [configErr, setConfigErr] = useState("");
+  const [configDraft, setConfigDraft] = useState<ConfiguracionDraft>({
+    dias_limite_retiro: "7",
+    puntos_referido_invitador: "50",
+    puntos_referido_invitado: "30",
+    longitud_codigo_invitacion: "9",
+  });
+  const [nuevaSucursal, setNuevaSucursal] = useState<SucursalForm>(emptySucursalForm());
+  const [editSucursalId, setEditSucursalId] = useState<number | null>(null);
+  const [editSucursalDraft, setEditSucursalDraft] = useState<SucursalForm>(emptySucursalForm());
 
   const [sobreDraft, setSobreDraft] = useState<EditorDraft>({
     titulo: "",
@@ -242,6 +402,16 @@ export function Admin() {
     queryFn: () => api.get<CanjeAdmin[]>("/admin/canjes"),
   });
 
+  const sucursalesQuery = useQuery({
+    queryKey: ["admin", "sucursales"],
+    queryFn: () => api.get<SucursalAdmin[]>("/admin/sucursales"),
+  });
+
+  const configuracionQuery = useQuery({
+    queryKey: ["admin", "configuracion"],
+    queryFn: () => api.get<ConfiguracionItem[]>("/admin/configuracion"),
+  });
+
   const sobreQuery = useQuery({
     queryKey: ["admin", "paginas", "sobre-nosotros"],
     queryFn: () => api.get<Pagina>("/admin/paginas/sobre-nosotros"),
@@ -278,6 +448,26 @@ export function Admin() {
     );
   }, [terminosQuery.data]);
 
+  useEffect(() => {
+    if (!adminHint) return;
+    const timer = window.setTimeout(() => setAdminHint(""), 5200);
+    return () => window.clearTimeout(timer);
+  }, [adminHint]);
+
+  useEffect(() => {
+    if (!configuracionQuery.data) return;
+    if (configLoaded) return;
+    const getConfig = (clave: keyof ConfiguracionDraft, fallback: string) =>
+      configuracionQuery.data?.find((item) => item.clave === clave)?.valor ?? fallback;
+    setConfigDraft({
+      dias_limite_retiro: getConfig("dias_limite_retiro", "7"),
+      puntos_referido_invitador: getConfig("puntos_referido_invitador", "50"),
+      puntos_referido_invitado: getConfig("puntos_referido_invitado", "30"),
+      longitud_codigo_invitacion: getConfig("longitud_codigo_invitacion", "9"),
+    });
+    setConfigLoaded(true);
+  }, [configLoaded, configuracionQuery.data]);
+
   const uploadImageMutation = useMutation({
     mutationFn: (file: File) => {
       const form = new FormData();
@@ -313,6 +503,17 @@ export function Admin() {
   const categorias = categoriasQuery.data ?? [];
   const codigos = codigosQuery.data ?? [];
   const canjes = canjesQuery.data ?? [];
+  const sucursales = sucursalesQuery.data ?? [];
+  const totalMovimientosInicioPages = Math.max(1, Math.ceil(movimientos.length / MOVIMIENTOS_INICIO_POR_PAGINA));
+
+  useEffect(() => {
+    setMovimientosInicioPage((prev) => Math.min(prev, totalMovimientosInicioPages));
+  }, [totalMovimientosInicioPages]);
+
+  const movimientosInicioPagina = useMemo(() => {
+    const start = (movimientosInicioPage - 1) * MOVIMIENTOS_INICIO_POR_PAGINA;
+    return movimientos.slice(start, start + MOVIMIENTOS_INICIO_POR_PAGINA);
+  }, [movimientos, movimientosInicioPage]);
 
   const usuariosFiltrados = useMemo(() => {
     const q = busquedaUsuarios.trim().toLowerCase();
@@ -348,8 +549,149 @@ export function Admin() {
     });
   }, [productos, busquedaProductos]);
 
-  const sobreHtml = useMemo(() => marked(sobreDraft.contenido || ""), [sobreDraft.contenido]);
-  const terminosHtml = useMemo(() => marked(terminosDraft.contenido || ""), [terminosDraft.contenido]);
+  const totalUsuariosPages = Math.max(1, Math.ceil(usuariosFiltrados.length / LISTA_POR_PAGINA));
+  const totalProductosPages = Math.max(1, Math.ceil(productosFiltrados.length / LISTA_POR_PAGINA));
+  const totalCategoriasPages = Math.max(1, Math.ceil(categorias.length / LISTA_POR_PAGINA));
+  const totalTransaccionesPages = Math.max(1, Math.ceil(movimientos.length / LISTA_POR_PAGINA));
+  const totalCanjesPages = Math.max(1, Math.ceil(canjes.length / LISTA_POR_PAGINA));
+  const totalCodigosPages = Math.max(1, Math.ceil(codigos.length / LISTA_POR_PAGINA));
+  const totalSucursalesPages = Math.max(1, Math.ceil(sucursales.length / LISTA_POR_PAGINA));
+
+  useEffect(() => {
+    setUsuariosPage((prev) => Math.min(prev, totalUsuariosPages));
+  }, [totalUsuariosPages]);
+
+  useEffect(() => {
+    setProductosPage((prev) => Math.min(prev, totalProductosPages));
+  }, [totalProductosPages]);
+
+  useEffect(() => {
+    setCategoriasPage((prev) => Math.min(prev, totalCategoriasPages));
+  }, [totalCategoriasPages]);
+
+  useEffect(() => {
+    setTransaccionesPage((prev) => Math.min(prev, totalTransaccionesPages));
+  }, [totalTransaccionesPages]);
+
+  useEffect(() => {
+    setCanjesPage((prev) => Math.min(prev, totalCanjesPages));
+  }, [totalCanjesPages]);
+
+  useEffect(() => {
+    setCodigosPage((prev) => Math.min(prev, totalCodigosPages));
+  }, [totalCodigosPages]);
+
+  useEffect(() => {
+    setSucursalesPage((prev) => Math.min(prev, totalSucursalesPages));
+  }, [totalSucursalesPages]);
+
+  const usuariosPagina = useMemo(() => {
+    const start = (usuariosPage - 1) * LISTA_POR_PAGINA;
+    return usuariosFiltrados.slice(start, start + LISTA_POR_PAGINA);
+  }, [usuariosFiltrados, usuariosPage]);
+
+  const productosPagina = useMemo(() => {
+    const start = (productosPage - 1) * LISTA_POR_PAGINA;
+    return productosFiltrados.slice(start, start + LISTA_POR_PAGINA);
+  }, [productosFiltrados, productosPage]);
+
+  const categoriasPagina = useMemo(() => {
+    const start = (categoriasPage - 1) * LISTA_POR_PAGINA;
+    return categorias.slice(start, start + LISTA_POR_PAGINA);
+  }, [categorias, categoriasPage]);
+
+  const transaccionesPagina = useMemo(() => {
+    const start = (transaccionesPage - 1) * LISTA_POR_PAGINA;
+    return movimientos.slice(start, start + LISTA_POR_PAGINA);
+  }, [movimientos, transaccionesPage]);
+
+  const canjesPagina = useMemo(() => {
+    const start = (canjesPage - 1) * LISTA_POR_PAGINA;
+    return canjes.slice(start, start + LISTA_POR_PAGINA);
+  }, [canjes, canjesPage]);
+
+  const codigosPagina = useMemo(() => {
+    const start = (codigosPage - 1) * LISTA_POR_PAGINA;
+    return codigos.slice(start, start + LISTA_POR_PAGINA);
+  }, [codigos, codigosPage]);
+
+  const sucursalesPagina = useMemo(() => {
+    const start = (sucursalesPage - 1) * LISTA_POR_PAGINA;
+    return sucursales.slice(start, start + LISTA_POR_PAGINA);
+  }, [sucursales, sucursalesPage]);
+
+  const sobreImagenes = useMemo(
+    () => extractPageImageUrls(sobreDraft.contenido || "").slice(0, MAX_STATIC_PAGE_IMAGES),
+    [sobreDraft.contenido],
+  );
+  const terminosImagenes = useMemo(
+    () => extractPageImageUrls(terminosDraft.contenido || "").slice(0, MAX_STATIC_PAGE_IMAGES),
+    [terminosDraft.contenido],
+  );
+
+  const sobreHtml = useMemo(() => marked(stripPageImages(sobreDraft.contenido || "")), [sobreDraft.contenido]);
+  const terminosHtml = useMemo(() => marked(stripPageImages(terminosDraft.contenido || "")), [terminosDraft.contenido]);
+
+  async function subirImagenProducto(file: File, target: "nuevo" | "edit") {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErrMsg("Solo puedes subir archivos de imagen.");
+      return;
+    }
+
+    const currentCount = target === "nuevo" ? nuevoProducto.imagenes.length : editDraft.imagenes.length;
+    if (currentCount >= MAX_PRODUCT_IMAGES) {
+      setErrMsg(`Solo puedes cargar hasta ${MAX_PRODUCT_IMAGES} imágenes por producto.`);
+      return;
+    }
+
+    setBusy(true);
+    setErrMsg("");
+    try {
+      const upload = await uploadImageMutation.mutateAsync(file);
+      if (target === "nuevo") {
+        setNuevoProducto((prev) => ({ ...prev, imagenes: normalizeImageList([...prev.imagenes, upload.url]) }));
+      } else {
+        setEditDraft((prev) => ({ ...prev, imagenes: normalizeImageList([...prev.imagenes, upload.url]) }));
+      }
+      setAdminHint("Imagen cargada. Puedes arrastrar otra foto o guardar el producto.");
+    } catch (error) {
+      setErrMsg((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function manejarDropImagenesProducto(
+    event: DragEvent<HTMLDivElement>,
+    target: "nuevo" | "edit"
+  ) {
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (!files.length) return;
+
+    const current = target === "nuevo" ? nuevoProducto.imagenes.length : editDraft.imagenes.length;
+    const slotsAvailable = Math.max(0, MAX_PRODUCT_IMAGES - current);
+    const accepted = files.filter((file) => file.type.startsWith("image/")).slice(0, slotsAvailable);
+    if (!accepted.length) {
+      setErrMsg(`Arrastra imágenes válidas. Máximo ${MAX_PRODUCT_IMAGES} por producto.`);
+      return;
+    }
+
+    for (const file of accepted) {
+      // Subida secuencial para mantener el orden de las imágenes.
+      // eslint-disable-next-line no-await-in-loop
+      await subirImagenProducto(file, target);
+    }
+  }
+
+  function quitarImagenProducto(target: "nuevo" | "edit", index: number) {
+    if (target === "nuevo") {
+      setNuevoProducto((prev) => ({ ...prev, imagenes: prev.imagenes.filter((_, idx) => idx !== index) }));
+      return;
+    }
+    setEditDraft((prev) => ({ ...prev, imagenes: prev.imagenes.filter((_, idx) => idx !== index) }));
+  }
 
   async function crearProducto() {
     setErrMsg("");
@@ -366,11 +708,8 @@ export function Admin() {
 
     setBusy(true);
     try {
-      let imagenUrl = nuevoProducto.imagen_url || null;
-      if (nuevoProducto.imagen_file) {
-        const upload = await uploadImageMutation.mutateAsync(nuevoProducto.imagen_file);
-        imagenUrl = upload.url;
-      }
+      const imagenes = normalizeImageList(nuevoProducto.imagenes);
+      const imagenUrl = imagenes[0] ?? null;
 
       await commandMutation.mutateAsync({
         method: "post",
@@ -381,6 +720,7 @@ export function Admin() {
           categoria: nuevoProducto.categoria || null,
           puntos_requeridos: Number(nuevoProducto.puntos_requeridos),
           puntos_acumulables: nuevoProducto.puntos_acumulables ? Number(nuevoProducto.puntos_acumulables) : null,
+          imagenes,
           imagen_url: imagenUrl,
         },
       });
@@ -403,9 +743,7 @@ export function Admin() {
       categoria: producto.categoria || "",
       puntos_requeridos: producto.puntos_requeridos,
       puntos_acumulables: producto.puntos_acumulables,
-      imagen_url: producto.imagen_url || "",
-      imagen_file: null,
-      imagen_preview: null,
+      imagenes: normalizeImageList(producto.imagenes ?? (producto.imagen_url ? [producto.imagen_url] : [])),
     });
   }
 
@@ -414,11 +752,8 @@ export function Admin() {
     setOkMsg("");
     setBusy(true);
     try {
-      let imagenUrl = editDraft.imagen_url || null;
-      if (editDraft.imagen_file) {
-        const upload = await uploadImageMutation.mutateAsync(editDraft.imagen_file);
-        imagenUrl = upload.url;
-      }
+      const imagenes = normalizeImageList(editDraft.imagenes);
+      const imagenUrl = imagenes[0] ?? null;
 
       await commandMutation.mutateAsync({
         method: "put",
@@ -429,6 +764,7 @@ export function Admin() {
           categoria: editDraft.categoria || null,
           puntos_requeridos: Number(editDraft.puntos_requeridos),
           puntos_acumulables: editDraft.puntos_acumulables ? Number(editDraft.puntos_acumulables) : null,
+          imagenes,
           imagen_url: imagenUrl,
         },
       });
@@ -495,6 +831,65 @@ export function Admin() {
       await refreshQueries([["admin", "usuarios"], ["admin", "stats"]]);
     } catch (error) {
       setErrMsg((error as Error).message);
+    }
+  }
+
+  function iniciarEdicionUsuario(usuario: Usuario) {
+    setEditUsuarioId(usuario.id);
+    setEditUsuarioDraft({
+      nombre: usuario.nombre,
+      email: usuario.email,
+      rol: usuario.rol,
+      dni: usuario.dni || "",
+      telefono: usuario.telefono || "",
+    });
+    setErrMsg("");
+    setOkMsg("");
+  }
+
+  function cancelarEdicionUsuario() {
+    setEditUsuarioId(null);
+    setEditUsuarioDraft({
+      nombre: "",
+      email: "",
+      rol: "cliente",
+      dni: "",
+      telefono: "",
+    });
+  }
+
+  async function guardarEdicionUsuario(usuarioId: number) {
+    setErrMsg("");
+    setOkMsg("");
+    if (!editUsuarioDraft.nombre.trim() || !editUsuarioDraft.email.trim()) {
+      setErrMsg("Nombre y email son obligatorios para editar usuario.");
+      return;
+    }
+    if (editUsuarioDraft.rol === "cliente" && !editUsuarioDraft.dni.trim()) {
+      setErrMsg("El DNI es obligatorio para usuarios con rol cliente.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await commandMutation.mutateAsync({
+        method: "put",
+        path: `/admin/usuarios/${usuarioId}`,
+        body: {
+          nombre: editUsuarioDraft.nombre.trim(),
+          email: editUsuarioDraft.email.trim().toLowerCase(),
+          rol: editUsuarioDraft.rol,
+          dni: editUsuarioDraft.dni.trim() || null,
+          telefono: editUsuarioDraft.telefono.trim() || null,
+        },
+      });
+      setOkMsg("Usuario actualizado.");
+      cancelarEdicionUsuario();
+      await refreshQueries([["admin", "usuarios"]]);
+    } catch (error) {
+      setErrMsg((error as Error).message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -651,36 +1046,253 @@ export function Admin() {
     });
   }
 
-  async function guardarPagina(slug: "sobre-nosotros" | "terminos") {
+  async function guardarConfiguracionGeneral() {
+    setConfigErr("");
+    setConfigMsg("");
+
+    const diasLimiteRetiro = Number(configDraft.dias_limite_retiro);
+    const puntosInvitador = Number(configDraft.puntos_referido_invitador);
+    const puntosInvitado = Number(configDraft.puntos_referido_invitado);
+    const longitudCodigoInvitacion = Number(configDraft.longitud_codigo_invitacion);
+
+    if (!Number.isInteger(diasLimiteRetiro) || diasLimiteRetiro <= 0 || diasLimiteRetiro > 90) {
+      setConfigErr("Los dias limite de retiro deben ser un numero entero entre 1 y 90.");
+      return;
+    }
+    if (!Number.isInteger(puntosInvitador) || puntosInvitador < 0 || puntosInvitador > 100000) {
+      setConfigErr("Los puntos para el invitador deben ser un numero entero entre 0 y 100000.");
+      return;
+    }
+    if (!Number.isInteger(puntosInvitado) || puntosInvitado < 0 || puntosInvitado > 100000) {
+      setConfigErr("Los puntos para el invitado deben ser un numero entero entre 0 y 100000.");
+      return;
+    }
+    if (!Number.isInteger(longitudCodigoInvitacion) || longitudCodigoInvitacion < 6 || longitudCodigoInvitacion > 20) {
+      setConfigErr("La longitud del codigo de invitacion debe ser un entero entre 6 y 20.");
+      return;
+    }
+
+    setConfigBusy(true);
+    try {
+      const updates = [
+        {
+          clave: "dias_limite_retiro",
+          valor: String(diasLimiteRetiro),
+          descripcion: "Dias que tiene el cliente para retirar un producto canjeado antes de que expire.",
+        },
+        {
+          clave: "puntos_referido_invitador",
+          valor: String(puntosInvitador),
+          descripcion: "Puntos que gana quien comparte su codigo de invitacion.",
+        },
+        {
+          clave: "puntos_referido_invitado",
+          valor: String(puntosInvitado),
+          descripcion: "Puntos que gana quien se registra usando un codigo de invitacion.",
+        },
+        {
+          clave: "longitud_codigo_invitacion",
+          valor: String(longitudCodigoInvitacion),
+          descripcion: "Longitud del codigo de invitacion generado automaticamente.",
+        },
+      ];
+
+      await Promise.all(
+        updates.map((item) =>
+          commandMutation.mutateAsync({
+            method: "put",
+            path: `/admin/configuracion/${item.clave}`,
+            body: { valor: item.valor, descripcion: item.descripcion },
+          }),
+        ),
+      );
+
+      setConfigMsg("Configuracion general actualizada.");
+      await queryClient.invalidateQueries({ queryKey: ["admin", "configuracion"] });
+    } catch (error) {
+      setConfigErr((error as Error).message);
+    } finally {
+      setConfigBusy(false);
+    }
+  }
+
+  function iniciarEdicionSucursal(sucursal: SucursalAdmin) {
+    setEditSucursalId(sucursal.id);
+    setEditSucursalDraft({
+      nombre: sucursal.nombre,
+      direccion: sucursal.direccion,
+      piso: sucursal.piso || "",
+      localidad: sucursal.localidad,
+      provincia: sucursal.provincia,
+    });
+  }
+
+  async function crearSucursal() {
+    setErrMsg("");
+    setOkMsg("");
+    if (!nuevaSucursal.nombre.trim() || !nuevaSucursal.direccion.trim() || !nuevaSucursal.localidad.trim() || !nuevaSucursal.provincia.trim()) {
+      setErrMsg("Completa nombre, direccion, localidad y provincia para crear la sucursal.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await commandMutation.mutateAsync({
+        method: "post",
+        path: "/admin/sucursales",
+        body: {
+          nombre: nuevaSucursal.nombre.trim(),
+          direccion: nuevaSucursal.direccion.trim(),
+          piso: nuevaSucursal.piso.trim() || null,
+          localidad: nuevaSucursal.localidad.trim(),
+          provincia: nuevaSucursal.provincia.trim(),
+        },
+      });
+      setNuevaSucursal(emptySucursalForm());
+      setOkMsg("Sucursal creada.");
+      await refreshQueries([["admin", "sucursales"]]);
+    } catch (error) {
+      setErrMsg((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function guardarEdicionSucursal(sucursalId: number) {
+    setErrMsg("");
+    setOkMsg("");
+    if (!editSucursalDraft.nombre.trim() || !editSucursalDraft.direccion.trim() || !editSucursalDraft.localidad.trim() || !editSucursalDraft.provincia.trim()) {
+      setErrMsg("Completa nombre, direccion, localidad y provincia para guardar la sucursal.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await commandMutation.mutateAsync({
+        method: "put",
+        path: `/admin/sucursales/${sucursalId}`,
+        body: {
+          nombre: editSucursalDraft.nombre.trim(),
+          direccion: editSucursalDraft.direccion.trim(),
+          piso: editSucursalDraft.piso.trim() || null,
+          localidad: editSucursalDraft.localidad.trim(),
+          provincia: editSucursalDraft.provincia.trim(),
+        },
+      });
+      setEditSucursalId(null);
+      setOkMsg("Sucursal actualizada.");
+      await refreshQueries([["admin", "sucursales"], ["admin", "canjes"]]);
+    } catch (error) {
+      setErrMsg((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleSucursalActiva(sucursal: SucursalAdmin) {
+    setErrMsg("");
+    setOkMsg("");
+    try {
+      await commandMutation.mutateAsync({
+        method: "patch",
+        path: `/admin/sucursales/${sucursal.id}/activo`,
+        body: { activo: !sucursal.activo },
+      });
+      setOkMsg(!sucursal.activo ? "Sucursal activada." : "Sucursal desactivada.");
+      await refreshQueries([["admin", "sucursales"]]);
+    } catch (error) {
+      setErrMsg((error as Error).message);
+    }
+  }
+
+  function normalizarContenidoPagina(contenido: string): string {
+    const cuerpo = stripPageImages(contenido || "");
+    const imagenes = extractPageImageUrls(contenido || "").slice(0, MAX_STATIC_PAGE_IMAGES);
+    return rebuildPageContent(cuerpo, imagenes);
+  }
+
+  async function guardarPagina(slug: StaticPageSlug) {
     const draft = slug === "sobre-nosotros" ? sobreDraft : terminosDraft;
     const setDraft = slug === "sobre-nosotros" ? setSobreDraft : setTerminosDraft;
+    const totalImagenes = extractPageImageUrls(draft.contenido || "").length;
+    if (totalImagenes > MAX_STATIC_PAGE_IMAGES) {
+      setDraft((prev) => ({
+        ...prev,
+        okMsg: "",
+        errMsg: `Solo se permiten hasta ${MAX_STATIC_PAGE_IMAGES} fotos.`,
+      }));
+      return;
+    }
+
+    const contenidoNormalizado = normalizarContenidoPagina(draft.contenido || "");
     setDraft((prev) => ({ ...prev, okMsg: "", errMsg: "" }));
     try {
       await commandMutation.mutateAsync({
         method: "put",
         path: `/admin/paginas/${slug}`,
         body: {
-          titulo: draft.titulo,
-          contenido: draft.contenido,
+          titulo: draft.titulo.trim(),
+          contenido: contenidoNormalizado,
         },
       });
-      setDraft((prev) => ({ ...prev, okMsg: "Guardado correctamente." }));
+      setDraft((prev) => ({
+        ...prev,
+        contenido: contenidoNormalizado,
+        okMsg: "Guardado correctamente.",
+      }));
       await queryClient.invalidateQueries({ queryKey: ["admin", "paginas", slug] });
     } catch (error) {
       setDraft((prev) => ({ ...prev, errMsg: (error as Error).message }));
     }
   }
 
-  async function subirImagenSobre(file: File) {
+  async function subirImagenPagina(slug: StaticPageSlug, file: File) {
+    const draft = slug === "sobre-nosotros" ? sobreDraft : terminosDraft;
+    const setDraft = slug === "sobre-nosotros" ? setSobreDraft : setTerminosDraft;
+    const imagenesActuales = extractPageImageUrls(draft.contenido || "").slice(0, MAX_STATIC_PAGE_IMAGES);
+
+    if (imagenesActuales.length >= MAX_STATIC_PAGE_IMAGES) {
+      setDraft((prev) => ({
+        ...prev,
+        okMsg: "",
+        errMsg: `Llegaste al maximo de ${MAX_STATIC_PAGE_IMAGES} fotos.`,
+      }));
+      return;
+    }
+
     try {
       const upload = await uploadImageMutation.mutateAsync(file);
-      setSobreDraft((prev) => ({
-        ...prev,
-        contenido: `${prev.contenido}\n\n![imagen](${upload.url})\n`,
-      }));
+      setDraft((prev) => {
+        const cuerpo = stripPageImages(prev.contenido || "");
+        const imagenes = extractPageImageUrls(prev.contenido || "").slice(0, MAX_STATIC_PAGE_IMAGES);
+        if (imagenes.length >= MAX_STATIC_PAGE_IMAGES) {
+          return {
+            ...prev,
+            okMsg: "",
+            errMsg: `Llegaste al maximo de ${MAX_STATIC_PAGE_IMAGES} fotos.`,
+          };
+        }
+        return {
+          ...prev,
+          errMsg: "",
+          contenido: rebuildPageContent(cuerpo, [...imagenes, upload.url]),
+        };
+      });
     } catch (error) {
-      setSobreDraft((prev) => ({ ...prev, errMsg: (error as Error).message }));
+      setDraft((prev) => ({ ...prev, errMsg: (error as Error).message }));
     }
+  }
+
+  function quitarImagenPagina(slug: StaticPageSlug, index: number) {
+    const setDraft = slug === "sobre-nosotros" ? setSobreDraft : setTerminosDraft;
+    setDraft((prev) => {
+      const cuerpo = stripPageImages(prev.contenido || "");
+      const imagenes = extractPageImageUrls(prev.contenido || "").slice(0, MAX_STATIC_PAGE_IMAGES);
+      const actualizadas = imagenes.filter((_, imageIndex) => imageIndex !== index);
+      return {
+        ...prev,
+        errMsg: "",
+        contenido: rebuildPageContent(cuerpo, actualizadas),
+      };
+    });
   }
 
   const stats = statsQuery.data;
@@ -734,11 +1346,13 @@ export function Admin() {
 
       <main className="admin-main">
         <div className="admin-topbar">
-          <div>
+          <div className="admin-topbar-main">
             <h1 className="admin-topbar-title">Panel de administracion</h1>
             <p className="admin-topbar-sub">Resumen del programa de puntos</p>
           </div>
-          <div className="admin-topbar-date">{new Date().toLocaleDateString("es-AR")}</div>
+          <div className="admin-topbar-actions">
+            <div className="admin-topbar-date">{new Date().toLocaleDateString("es-AR")}</div>
+          </div>
         </div>
 
         <div className="admin-content">
@@ -763,6 +1377,7 @@ export function Admin() {
 
           {errMsg ? <div className="adm-msg-err" style={{ marginBottom: "1rem" }}>{errMsg}</div> : null}
           {okMsg ? <div className="adm-msg-ok" style={{ marginBottom: "1rem" }}>{okMsg}</div> : null}
+          {adminHint ? <div className="adm-floating-note">{adminHint}</div> : null}
 
           {tab === "inicio" ? (
             <>
@@ -786,10 +1401,17 @@ export function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {movimientos.slice(0, 12).map((movimiento) => (
+                      {movimientosInicioPagina.length === 0 ? (
+                        <tr>
+                          <td colSpan={5}>
+                            <div className="adm-empty">No hay movimientos para mostrar.</div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      {movimientosInicioPagina.map((movimiento) => (
                         <tr key={movimiento.id}>
                           <td>{movimiento.usuario_nombre}</td>
-                          <td>{movimiento.tipo}</td>
+                          <td>{formatMovimientoTipo(movimiento.tipo)}</td>
                           <td className={movimiento.puntos >= 0 ? "adm-pts-pos" : "adm-pts-neg"}>
                             {movimiento.puntos >= 0 ? "+" : ""}
                             {movimiento.puntos}
@@ -801,6 +1423,228 @@ export function Admin() {
                     </tbody>
                   </table>
                 </div>
+                <PaginationControls
+                  page={movimientosInicioPage}
+                  totalPages={totalMovimientosInicioPages}
+                  onPrev={() => setMovimientosInicioPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setMovimientosInicioPage((prev) => Math.min(totalMovimientosInicioPages, prev + 1))}
+                />
+              </div>
+
+              <div className="admin-section-header adm-config-header">
+                <h2 className="admin-section-title">Configuracion del programa</h2>
+              </div>
+              <div className="admin-card admin-card-padded adm-config-card">
+                <p className="adm-config-subtitle">
+                  Ajusta el vencimiento de canjes y la logica de puntos de referidos sin tocar codigo.
+                </p>
+                <div className="adm-config-grid">
+                  <div className="adm-field">
+                    <FieldLabel
+                      text="Dias limite de retiro"
+                      tip="Cantidad de dias que tiene el cliente para retirar un canje antes de que expire."
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={90}
+                      className="adm-input"
+                      value={configDraft.dias_limite_retiro}
+                      onChange={(event) => setConfigDraft((prev) => ({ ...prev, dias_limite_retiro: event.target.value }))}
+                      placeholder="Ej: 7"
+                    />
+                  </div>
+                  <div className="adm-field">
+                    <FieldLabel
+                      text="Puntos para quien invita"
+                      tip="Puntos que recibe el usuario que comparte su codigo cuando otra persona se registra."
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={100000}
+                      className="adm-input"
+                      value={configDraft.puntos_referido_invitador}
+                      onChange={(event) => setConfigDraft((prev) => ({ ...prev, puntos_referido_invitador: event.target.value }))}
+                      placeholder="Ej: 50"
+                    />
+                  </div>
+                  <div className="adm-field">
+                    <FieldLabel
+                      text="Puntos para quien se registra"
+                      tip="Puntos que recibe el nuevo cliente al usar un codigo de invitacion valido."
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={100000}
+                      className="adm-input"
+                      value={configDraft.puntos_referido_invitado}
+                      onChange={(event) => setConfigDraft((prev) => ({ ...prev, puntos_referido_invitado: event.target.value }))}
+                      placeholder="Ej: 30"
+                    />
+                  </div>
+                </div>
+                {configErr ? <div className="adm-msg-err">{configErr}</div> : null}
+                {configMsg ? <div className="adm-msg-ok">{configMsg}</div> : null}
+                <div className="adm-config-actions">
+                  <button className="adm-btn-primary adm-btn-inline" onClick={guardarConfiguracionGeneral} disabled={configBusy}>
+                    {configBusy ? "Guardando..." : "Guardar configuracion"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="admin-section-header adm-config-header">
+                <h2 className="admin-section-title">Tabla de sucursales de retiro</h2>
+              </div>
+              <div className="admin-card admin-card-padded" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <p className="adm-config-subtitle">Estas sucursales se muestran al cliente para elegir donde retirar su canje.</p>
+                <div className="adm-form-grid">
+                  <input
+                    className="adm-input"
+                    placeholder="Nombre (ej: Sucursal Centro)"
+                    value={nuevaSucursal.nombre}
+                    onChange={(event) => setNuevaSucursal((prev) => ({ ...prev, nombre: event.target.value }))}
+                  />
+                  <input
+                    className="adm-input"
+                    placeholder="Direccion (ej: Corrientes 1234)"
+                    value={nuevaSucursal.direccion}
+                    onChange={(event) => setNuevaSucursal((prev) => ({ ...prev, direccion: event.target.value }))}
+                  />
+                </div>
+                <div className="adm-form-grid">
+                  <input
+                    className="adm-input"
+                    placeholder="Piso (opcional)"
+                    value={nuevaSucursal.piso}
+                    onChange={(event) => setNuevaSucursal((prev) => ({ ...prev, piso: event.target.value }))}
+                  />
+                  <input
+                    className="adm-input"
+                    placeholder="Localidad"
+                    value={nuevaSucursal.localidad}
+                    onChange={(event) => setNuevaSucursal((prev) => ({ ...prev, localidad: event.target.value }))}
+                  />
+                </div>
+                <input
+                  className="adm-input"
+                  placeholder="Provincia"
+                  value={nuevaSucursal.provincia}
+                  onChange={(event) => setNuevaSucursal((prev) => ({ ...prev, provincia: event.target.value }))}
+                />
+                <button className="adm-btn-primary adm-btn-inline" onClick={crearSucursal} disabled={busy}>
+                  {busy ? "Guardando..." : "Agregar sucursal"}
+                </button>
+              </div>
+
+              <div className="admin-card" style={{ marginTop: "0.85rem" }}>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Nombre</th>
+                        <th>Direccion</th>
+                        <th>Piso</th>
+                        <th>Localidad</th>
+                        <th>Provincia</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sucursalesPagina.length === 0 ? (
+                        <tr>
+                          <td colSpan={7}>
+                            <div className="adm-empty">No hay sucursales registradas.</div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      {sucursalesPagina.map((sucursal) => (
+                        <Fragment key={sucursal.id}>
+                          <tr>
+                            <td>{sucursal.nombre}</td>
+                            <td>{sucursal.direccion}</td>
+                            <td>{sucursal.piso || "-"}</td>
+                            <td>{sucursal.localidad}</td>
+                            <td>{sucursal.provincia}</td>
+                            <td>{sucursal.activo ? "Activa" : "Inactiva"}</td>
+                            <td>
+                              <div className="adm-user-actions">
+                                <button className="adm-btn-link" onClick={() => iniciarEdicionSucursal(sucursal)}>
+                                  Editar
+                                </button>
+                                <button
+                                  className={sucursal.activo ? "adm-btn-danger" : "adm-btn-success"}
+                                  onClick={() => toggleSucursalActiva(sucursal)}
+                                >
+                                  {sucursal.activo ? "Desactivar" : "Activar"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {editSucursalId === sucursal.id ? (
+                            <tr>
+                              <td colSpan={7}>
+                                <div className="adm-inline-points-box">
+                                  <div className="adm-form-grid">
+                                    <input
+                                      className="adm-input"
+                                      placeholder="Nombre"
+                                      value={editSucursalDraft.nombre}
+                                      onChange={(event) => setEditSucursalDraft((prev) => ({ ...prev, nombre: event.target.value }))}
+                                    />
+                                    <input
+                                      className="adm-input"
+                                      placeholder="Direccion"
+                                      value={editSucursalDraft.direccion}
+                                      onChange={(event) => setEditSucursalDraft((prev) => ({ ...prev, direccion: event.target.value }))}
+                                    />
+                                  </div>
+                                  <div className="adm-form-grid" style={{ marginTop: "0.55rem" }}>
+                                    <input
+                                      className="adm-input"
+                                      placeholder="Piso (opcional)"
+                                      value={editSucursalDraft.piso}
+                                      onChange={(event) => setEditSucursalDraft((prev) => ({ ...prev, piso: event.target.value }))}
+                                    />
+                                    <input
+                                      className="adm-input"
+                                      placeholder="Localidad"
+                                      value={editSucursalDraft.localidad}
+                                      onChange={(event) => setEditSucursalDraft((prev) => ({ ...prev, localidad: event.target.value }))}
+                                    />
+                                  </div>
+                                  <input
+                                    className="adm-input"
+                                    style={{ marginTop: "0.55rem" }}
+                                    placeholder="Provincia"
+                                    value={editSucursalDraft.provincia}
+                                    onChange={(event) => setEditSucursalDraft((prev) => ({ ...prev, provincia: event.target.value }))}
+                                  />
+                                  <div className="adm-inline-points-actions">
+                                    <button className="adm-btn-primary adm-btn-inline" onClick={() => guardarEdicionSucursal(sucursal.id)} disabled={busy}>
+                                      {busy ? "Guardando..." : "Guardar cambios"}
+                                    </button>
+                                    <button className="adm-btn-secondary adm-btn-inline" onClick={() => setEditSucursalId(null)}>
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginationControls
+                  page={sucursalesPage}
+                  totalPages={totalSucursalesPages}
+                  onPrev={() => setSucursalesPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setSucursalesPage((prev) => Math.min(totalSucursalesPages, prev + 1))}
+                />
               </div>
             </>
           ) : null}
@@ -845,12 +1689,12 @@ export function Admin() {
                           </td>
                         </tr>
                       ) : null}
-                      {usuariosFiltrados.map((usuario) => (
+                      {usuariosPagina.map((usuario) => (
                         <Fragment key={usuario.id}>
                           <tr>
                             <td>{usuario.nombre}</td>
                             <td>{usuario.email}</td>
-                            <td>{usuario.rol}</td>
+                            <td>{formatRolLabel(usuario.rol)}</td>
                             <td>{usuario.dni || "-"}</td>
                             <td>{usuario.puntos_saldo}</td>
                             <td>
@@ -860,6 +1704,9 @@ export function Admin() {
                             </td>
                             <td>
                               <div className="adm-user-actions">
+                                <button className="adm-btn-link" onClick={() => iniciarEdicionUsuario(usuario)}>
+                                  Editar
+                                </button>
                                 {usuario.rol === "cliente" ? (
                                   <button className="adm-btn-link" onClick={() => abrirAsignacion(usuario)}>
                                     Asignar puntos
@@ -874,6 +1721,66 @@ export function Admin() {
                               </div>
                             </td>
                           </tr>
+                          {editUsuarioId === usuario.id ? (
+                            <tr>
+                              <td colSpan={7}>
+                                <div className="adm-inline-points-box">
+                                  <p className="adm-inline-points-title">Editar usuario: {usuario.nombre}</p>
+                                  <div className="adm-form-grid">
+                                    <input
+                                      className="adm-input"
+                                      placeholder="Nombre"
+                                      value={editUsuarioDraft.nombre}
+                                      onChange={(event) => setEditUsuarioDraft((prev) => ({ ...prev, nombre: event.target.value }))}
+                                    />
+                                    <input
+                                      className="adm-input"
+                                      placeholder="Email"
+                                      value={editUsuarioDraft.email}
+                                      onChange={(event) => setEditUsuarioDraft((prev) => ({ ...prev, email: event.target.value }))}
+                                    />
+                                  </div>
+                                  <div className="adm-form-grid" style={{ marginTop: "0.6rem" }}>
+                                    <select
+                                      className="adm-input"
+                                      value={editUsuarioDraft.rol}
+                                      onChange={(event) =>
+                                        setEditUsuarioDraft((prev) => ({ ...prev, rol: event.target.value as UsuarioEditDraft["rol"] }))
+                                      }
+                                    >
+                                      <option value="cliente">Cliente</option>
+                                      <option value="vendedor">Vendedor</option>
+                                      <option value="admin">Admin</option>
+                                    </select>
+                                    <input
+                                      className="adm-input"
+                                      placeholder="Teléfono (opcional)"
+                                      value={editUsuarioDraft.telefono}
+                                      onChange={(event) => setEditUsuarioDraft((prev) => ({ ...prev, telefono: event.target.value }))}
+                                    />
+                                  </div>
+                                  {editUsuarioDraft.rol === "cliente" ? (
+                                    <div className="adm-form-grid" style={{ marginTop: "0.6rem" }}>
+                                      <input
+                                        className="adm-input"
+                                        placeholder="DNI"
+                                        value={editUsuarioDraft.dni}
+                                        onChange={(event) => setEditUsuarioDraft((prev) => ({ ...prev, dni: event.target.value }))}
+                                      />
+                                    </div>
+                                  ) : null}
+                                  <div className="adm-inline-points-actions">
+                                    <button className="adm-btn-primary adm-btn-inline" disabled={busy} onClick={() => guardarEdicionUsuario(usuario.id)}>
+                                      {busy ? "Guardando..." : "Guardar cambios"}
+                                    </button>
+                                    <button className="adm-btn-secondary adm-btn-inline" onClick={cancelarEdicionUsuario}>
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : null}
                           {asignacionUsuarioId === usuario.id ? (
                             <tr>
                               <td colSpan={7}>
@@ -913,6 +1820,12 @@ export function Admin() {
                     </tbody>
                   </table>
                 </div>
+                <PaginationControls
+                  page={usuariosPage}
+                  totalPages={totalUsuariosPages}
+                  onPrev={() => setUsuariosPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setUsuariosPage((prev) => Math.min(totalUsuariosPages, prev + 1))}
+                />
               </div>
             </>
           ) : null}
@@ -952,28 +1865,44 @@ export function Admin() {
                   </div>
                 </div>
 
-                <div className="adm-field">
-                  <label className="adm-label">URL de imagen</label>
-                  <input className="adm-input" value={nuevoProducto.imagen_url} onChange={(event) => setNuevoProducto((prev) => ({ ...prev, imagen_url: event.target.value }))} />
-                </div>
-
-                <div className="adm-upload">
-                  <label className="adm-label" style={{ justifyContent: "center", cursor: "pointer" }}>
-                    Subir imagen
+                <div
+                  className="adm-upload adm-upload-dropzone"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => void manejarDropImagenesProducto(event, "nuevo")}
+                >
+                  <p className="adm-upload-drop-title">Arrastra fotos aquí (hasta 3)</p>
+                  <p className="adm-upload-drop-sub">O selecciona desde tu dispositivo</p>
+                  <label className="adm-btn-secondary adm-btn-inline" style={{ cursor: "pointer", width: "auto" }}>
+                    Cargar imagen
                     <input
                       type="file"
                       accept="image/*"
                       style={{ display: "none" }}
                       onChange={(event) => {
                         const file = event.target.files?.[0];
-                        if (!file) return;
-                        uploadPreview(file, (preview) => setNuevoProducto((prev) => ({ ...prev, imagen_file: file, imagen_preview: preview })));
+                        event.currentTarget.value = "";
+                        if (file) void subirImagenProducto(file, "nuevo");
                       }}
                     />
                   </label>
                 </div>
 
-                {nuevoProducto.imagen_preview ? <img src={nuevoProducto.imagen_preview} className="admin-preview-img" alt="preview nuevo producto" /> : null}
+                <div className="adm-inline-tip">Puedes cargar hasta 3 imágenes. La primera se usa como portada del catálogo.</div>
+                {nuevoProducto.imagenes.length ? (
+                  <div className="adm-product-images-grid">
+                    {nuevoProducto.imagenes.map((url, index) => (
+                      <div key={`${url}-${index}`} className="adm-product-image-card">
+                        <img src={url} className="adm-product-image-thumb" alt={`Imagen ${index + 1}`} />
+                        <div className="adm-product-image-row">
+                          <span>Imagen {index + 1}</span>
+                          <button type="button" className="adm-btn-danger" onClick={() => quitarImagenProducto("nuevo", index)}>
+                            Quitar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
 
                 <button className="adm-btn-primary" disabled={busy} onClick={crearProducto}>
                   {busy ? "Creando..." : "Crear producto"}
@@ -991,44 +1920,121 @@ export function Admin() {
               </div>
               <div className="admin-card">
                 {productosFiltrados.length === 0 ? <div className="adm-empty">No hay productos que coincidan con la busqueda.</div> : null}
-                {productosFiltrados.map((producto) => (
+                {productosPagina.map((producto) => (
                   <div key={producto.id} className="adm-product-row">
                     {editId === producto.id ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                         <div className="adm-form-grid">
-                          <input className="adm-input" value={editDraft.nombre} onChange={(event) => setEditDraft((prev) => ({ ...prev, nombre: event.target.value }))} />
-                          <select className="adm-input" value={editDraft.categoria} onChange={(event) => setEditDraft((prev) => ({ ...prev, categoria: event.target.value }))}>
-                            <option value="">Sin categoria</option>
-                            {categorias.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
-                          </select>
+                          <div className="adm-field">
+                            <FieldLabel
+                              text="Nombre"
+                              tip="Nombre visible del producto en el catalogo. Conviene usar uno claro y corto."
+                            />
+                            <input
+                              className="adm-input"
+                              value={editDraft.nombre}
+                              onChange={(event) => setEditDraft((prev) => ({ ...prev, nombre: event.target.value }))}
+                              placeholder="Ej: Alfajor de Chocolate"
+                            />
+                          </div>
+                          <div className="adm-field">
+                            <FieldLabel
+                              text="Categoria"
+                              tip="Categoria del producto para filtros. Si no aplica, deja Sin categoria."
+                            />
+                            <select
+                              className="adm-input"
+                              value={editDraft.categoria}
+                              onChange={(event) => setEditDraft((prev) => ({ ...prev, categoria: event.target.value }))}
+                            >
+                              <option value="">Sin categoria</option>
+                              {categorias.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                            </select>
+                          </div>
                         </div>
 
-                        <textarea className="adm-input" value={editDraft.descripcion} onChange={(event) => setEditDraft((prev) => ({ ...prev, descripcion: event.target.value }))} />
+                        <div className="adm-field">
+                          <FieldLabel
+                            text="Descripcion"
+                            tip="Resumen del producto que se mostrara debajo del titulo. Puedes incluir sabor, relleno y cobertura."
+                          />
+                          <textarea
+                            className="adm-input"
+                            value={editDraft.descripcion}
+                            onChange={(event) => setEditDraft((prev) => ({ ...prev, descripcion: event.target.value }))}
+                            placeholder="Ej: Alfajor de fecula de mandioca con relleno de dulce de leche..."
+                          />
+                        </div>
 
                         <div className="adm-form-grid">
-                          <input type="number" className="adm-input" value={editDraft.puntos_requeridos} onChange={(event) => setEditDraft((prev) => ({ ...prev, puntos_requeridos: Number(event.target.value) }))} />
-                          <input type="number" className="adm-input" value={editDraft.puntos_acumulables ?? ""} onChange={(event) => setEditDraft((prev) => ({ ...prev, puntos_acumulables: event.target.value ? Number(event.target.value) : null }))} />
+                          <div className="adm-field">
+                            <FieldLabel
+                              text="Puntos para canjear"
+                              tip="Cantidad de puntos que el cliente necesita para canjear este producto."
+                            />
+                            <input
+                              type="number"
+                              min={1}
+                              className="adm-input"
+                              value={editDraft.puntos_requeridos}
+                              onChange={(event) => setEditDraft((prev) => ({ ...prev, puntos_requeridos: Number(event.target.value) }))}
+                            />
+                          </div>
+                          <div className="adm-field">
+                            <FieldLabel
+                              text="Puntos que suma al comprar"
+                              tip="Puntos que gana el cliente cuando compra este producto."
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              className="adm-input"
+                              value={editDraft.puntos_acumulables ?? ""}
+                              onChange={(event) =>
+                                setEditDraft((prev) => ({ ...prev, puntos_acumulables: event.target.value ? Number(event.target.value) : null }))
+                              }
+                            />
+                          </div>
                         </div>
 
-                        <input className="adm-input" value={editDraft.imagen_url} onChange={(event) => setEditDraft((prev) => ({ ...prev, imagen_url: event.target.value }))} />
-
-                        <div className="adm-upload">
-                          <label className="adm-label" style={{ justifyContent: "center", cursor: "pointer" }}>
-                            Reemplazar imagen
+                        <div
+                          className="adm-upload adm-upload-dropzone"
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={(event) => void manejarDropImagenesProducto(event, "edit")}
+                        >
+                          <p className="adm-upload-drop-title">Arrastra fotos aquí (hasta 3)</p>
+                          <p className="adm-upload-drop-sub">También puedes reemplazar o agregar imágenes manualmente</p>
+                          <label className="adm-btn-secondary adm-btn-inline" style={{ cursor: "pointer", width: "auto" }}>
+                            Agregar imagen
                             <input
                               type="file"
                               accept="image/*"
                               style={{ display: "none" }}
                               onChange={(event) => {
                                 const file = event.target.files?.[0];
-                                if (!file) return;
-                                uploadPreview(file, (preview) => setEditDraft((prev) => ({ ...prev, imagen_file: file, imagen_preview: preview })));
+                                event.currentTarget.value = "";
+                                if (file) void subirImagenProducto(file, "edit");
                               }}
                             />
                           </label>
                         </div>
 
-                        {editDraft.imagen_preview ? <img src={editDraft.imagen_preview} className="admin-preview-img" alt="preview edit" /> : null}
+                        <div className="adm-inline-tip">Ordena tus imágenes quitando y volviendo a cargar. La primera se muestra como portada.</div>
+                        {editDraft.imagenes.length ? (
+                          <div className="adm-product-images-grid">
+                            {editDraft.imagenes.map((url, index) => (
+                              <div key={`${url}-${index}`} className="adm-product-image-card">
+                                <img src={url} className="adm-product-image-thumb" alt={`Imagen ${index + 1}`} />
+                                <div className="adm-product-image-row">
+                                  <span>Imagen {index + 1}</span>
+                                  <button type="button" className="adm-btn-danger" onClick={() => quitarImagenProducto("edit", index)}>
+                                    Quitar
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
 
                         <div style={{ display: "flex", gap: "0.5rem" }}>
                           <button className="adm-btn-primary" style={{ flex: 2 }} onClick={() => saveEdit(producto.id)}>
@@ -1046,6 +2052,7 @@ export function Admin() {
                           <p className="admin-producto-sub">
                             {producto.categoria || "Sin categoria"} - {producto.puntos_requeridos} pts
                           </p>
+                          <p className="admin-producto-sub">Imágenes: {producto.imagenes?.length ?? (producto.imagen_url ? 1 : 0)} / {MAX_PRODUCT_IMAGES}</p>
                         </div>
                         <div className="admin-producto-actions">
                           <button className="adm-btn-link" onClick={() => startEdit(producto)}>
@@ -1059,6 +2066,12 @@ export function Admin() {
                     )}
                   </div>
                 ))}
+                <PaginationControls
+                  page={productosPage}
+                  totalPages={totalProductosPages}
+                  onPrev={() => setProductosPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setProductosPage((prev) => Math.min(totalProductosPages, prev + 1))}
+                />
               </div>
             </div>
           ) : null}
@@ -1084,7 +2097,14 @@ export function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {categorias.map((categoria) => (
+                      {categoriasPagina.length === 0 ? (
+                        <tr>
+                          <td colSpan={2}>
+                            <div className="adm-empty">No hay categorias para mostrar.</div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      {categoriasPagina.map((categoria) => (
                         <tr key={categoria.id}>
                           <td>{categoria.nombre}</td>
                           <td>{formatDate(categoria.created_at)}</td>
@@ -1093,6 +2113,12 @@ export function Admin() {
                     </tbody>
                   </table>
                 </div>
+                <PaginationControls
+                  page={categoriasPage}
+                  totalPages={totalCategoriasPages}
+                  onPrev={() => setCategoriasPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setCategoriasPage((prev) => Math.min(totalCategoriasPages, prev + 1))}
+                />
               </div>
             </div>
           ) : null}
@@ -1114,10 +2140,17 @@ export function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {movimientos.map((movimiento) => (
+                      {transaccionesPagina.length === 0 ? (
+                        <tr>
+                          <td colSpan={6}>
+                            <div className="adm-empty">No hay movimientos para mostrar.</div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      {transaccionesPagina.map((movimiento) => (
                         <tr key={movimiento.id}>
                           <td>{movimiento.usuario_nombre}</td>
-                          <td>{movimiento.tipo}</td>
+                          <td>{formatMovimientoTipo(movimiento.tipo)}</td>
                           <td className={movimiento.puntos >= 0 ? "adm-pts-pos" : "adm-pts-neg"}>
                             {movimiento.puntos >= 0 ? "+" : ""}
                             {movimiento.puntos}
@@ -1130,6 +2163,12 @@ export function Admin() {
                     </tbody>
                   </table>
                 </div>
+                <PaginationControls
+                  page={transaccionesPage}
+                  totalPages={totalTransaccionesPages}
+                  onPrev={() => setTransaccionesPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setTransaccionesPage((prev) => Math.min(totalTransaccionesPages, prev + 1))}
+                />
               </div>
             </>
           ) : null}
@@ -1144,6 +2183,7 @@ export function Admin() {
                       <tr>
                         <th>Cliente</th>
                         <th>Producto</th>
+                        <th>Sucursal</th>
                         <th>Codigo</th>
                         <th>Puntos</th>
                         <th>Estado</th>
@@ -1152,7 +2192,14 @@ export function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {canjes.map((canje) => (
+                      {canjesPagina.length === 0 ? (
+                        <tr>
+                          <td colSpan={8}>
+                            <div className="adm-empty">No hay canjes para mostrar.</div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      {canjesPagina.map((canje) => (
                         <tr key={canje.id}>
                           <td>
                             {canje.cliente_nombre}
@@ -1160,9 +2207,25 @@ export function Admin() {
                             <span style={{ color: "#8B5A30", fontSize: "0.75rem" }}>{canje.cliente_dni}</span>
                           </td>
                           <td>{canje.producto_nombre}</td>
+                          <td>
+                            {canje.sucursal_nombre ? (
+                              <>
+                                {canje.sucursal_nombre}
+                                <br />
+                                <span style={{ color: "#8B5A30", fontSize: "0.75rem" }}>
+                                  {canje.sucursal_direccion}
+                                  {canje.sucursal_piso ? `, Piso ${canje.sucursal_piso}` : ""}
+                                  {canje.sucursal_localidad ? `, ${canje.sucursal_localidad}` : ""}
+                                  {canje.sucursal_provincia ? `, ${canje.sucursal_provincia}` : ""}
+                                </span>
+                              </>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
                           <td><span className="adm-code-chip">{getCanjeCode(canje)}</span></td>
                           <td>{canje.puntos_usados}</td>
-                          <td>{canje.estado}</td>
+                          <td>{formatEstadoCanje(canje.estado)}</td>
                           <td>{formatDate(canje.created_at)}</td>
                           <td>
                             {canje.estado === "pendiente" ? (
@@ -1183,6 +2246,12 @@ export function Admin() {
                     </tbody>
                   </table>
                 </div>
+                <PaginationControls
+                  page={canjesPage}
+                  totalPages={totalCanjesPages}
+                  onPrev={() => setCanjesPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setCanjesPage((prev) => Math.min(totalCanjesPages, prev + 1))}
+                />
               </div>
             </>
           ) : null}
@@ -1190,14 +2259,39 @@ export function Admin() {
           {tab === "codigos" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               <SectionTitle title="Nuevo codigo promocional" />
+              <div className="adm-inline-help">
+                <button
+                  type="button"
+                  className="adm-btn-link"
+                  onClick={() =>
+                    setAdminHint(
+                      "Código: nombre único (ej: BIENVENIDA2026). Puntos: valor que suma el código. Usos máximos: 0 = ilimitado, 1 o más para límite. Expiración: opcional, si no cargas fecha queda sin vencimiento."
+                    )
+                  }
+                >
+                  ¿Qué pongo en cada campo?
+                </button>
+              </div>
               <div className="admin-card admin-card-padded" style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
                 <div className="adm-form-grid">
-                  <input className="adm-input" placeholder="Codigo" value={nuevoCodigo.codigo} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, codigo: event.target.value.toUpperCase() }))} />
-                  <input type="number" className="adm-input" placeholder="Puntos" value={nuevoCodigo.puntos_valor} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, puntos_valor: Number(event.target.value) }))} />
+                  <div className="adm-field">
+                    <FieldLabel text="Código promocional" tip="Nombre único del código. Usa letras y números, sin espacios." />
+                    <input className="adm-input" placeholder="Ej: BIENVENIDA2026" value={nuevoCodigo.codigo} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, codigo: event.target.value.toUpperCase() }))} />
+                  </div>
+                  <div className="adm-field">
+                    <FieldLabel text="Puntos que entrega" tip="Cantidad de puntos que suma al canjear el código." />
+                    <input type="number" className="adm-input" placeholder="Ej: 500" value={nuevoCodigo.puntos_valor} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, puntos_valor: Number(event.target.value) }))} />
+                  </div>
                 </div>
                 <div className="adm-form-grid">
-                  <input type="number" className="adm-input" placeholder="Usos maximos" value={nuevoCodigo.usos_maximos} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, usos_maximos: Number(event.target.value) }))} />
-                  <input type="datetime-local" className="adm-input" value={nuevoCodigo.fecha_expiracion} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, fecha_expiracion: event.target.value }))} />
+                  <div className="adm-field">
+                    <FieldLabel text="Usos máximos" tip="0 significa ilimitado. Si pones 1, solo se puede usar una vez en total." />
+                    <input type="number" className="adm-input" placeholder="Ej: 1" value={nuevoCodigo.usos_maximos} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, usos_maximos: Number(event.target.value) }))} />
+                  </div>
+                  <div className="adm-field">
+                    <FieldLabel text="Fecha de expiración" tip="Opcional. Si lo dejas vacío, el código no vence por fecha." />
+                    <input type="datetime-local" className="adm-input" value={nuevoCodigo.fecha_expiracion} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, fecha_expiracion: event.target.value }))} />
+                  </div>
                 </div>
                 <button className="adm-btn-primary" disabled={busy} onClick={crearCodigo}>
                   {busy ? "Creando..." : "Crear codigo"}
@@ -1219,7 +2313,14 @@ export function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {codigos.map((codigo) => (
+                      {codigosPagina.length === 0 ? (
+                        <tr>
+                          <td colSpan={6}>
+                            <div className="adm-empty">No hay codigos para mostrar.</div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      {codigosPagina.map((codigo) => (
                         <tr key={codigo.id}>
                           <td><span className="adm-code-chip">{codigo.codigo}</span></td>
                           <td>{codigo.puntos_valor}</td>
@@ -1236,6 +2337,12 @@ export function Admin() {
                     </tbody>
                   </table>
                 </div>
+                <PaginationControls
+                  page={codigosPage}
+                  totalPages={totalCodigosPages}
+                  onPrev={() => setCodigosPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setCodigosPage((prev) => Math.min(totalCodigosPages, prev + 1))}
+                />
               </div>
             </div>
           ) : null}
@@ -1247,7 +2354,13 @@ export function Admin() {
                 <input className="adm-input" placeholder="Nombre" value={nuevoUsuario.nombre} onChange={(event) => setNuevoUsuario((prev) => ({ ...prev, nombre: event.target.value }))} />
                 <input className="adm-input" placeholder="Email" value={nuevoUsuario.email} onChange={(event) => setNuevoUsuario((prev) => ({ ...prev, email: event.target.value }))} />
                 <input type="password" className="adm-input" placeholder="Contrasena" value={nuevoUsuario.password} onChange={(event) => setNuevoUsuario((prev) => ({ ...prev, password: event.target.value }))} />
-                <select className="adm-input" value={nuevoUsuario.rol} onChange={(event) => setNuevoUsuario((prev) => ({ ...prev, rol: event.target.value }))}>
+                <select
+                  className="adm-input"
+                  value={nuevoUsuario.rol}
+                  onChange={(event) =>
+                    setNuevoUsuario((prev) => ({ ...prev, rol: event.target.value as "cliente" | "vendedor" | "admin" }))
+                  }
+                >
                   <option value="vendedor">Vendedor</option>
                   <option value="cliente">Cliente</option>
                   <option value="admin">Admin</option>
@@ -1273,14 +2386,47 @@ export function Admin() {
                       <span className="adm-notepad-md-badge">MD</span>
                     </div>
                     <div className="adm-notepad-body">
+                      <p className="adm-md-hint">
+                        Guía rápida Markdown: <code>#</code> título grande, <code>##</code> subtítulo, <code>-</code> listas,
+                        <code> **texto** </code> negrita y <code>[texto](https://url)</code> para enlaces.
+                      </p>
                       <input className="adm-notepad-title-input" value={sobreDraft.titulo} onChange={(event) => setSobreDraft((prev) => ({ ...prev, titulo: event.target.value }))} placeholder="Titulo" />
                       <textarea className="adm-notepad-textarea adm-page-textarea" value={sobreDraft.contenido} onChange={(event) => setSobreDraft((prev) => ({ ...prev, contenido: event.target.value }))} placeholder="Contenido en markdown" />
+                      <div className="adm-page-images-panel">
+                        <div className="adm-page-images-head">
+                          <p className="adm-page-images-title">Fotos debajo ({sobreImagenes.length}/{MAX_STATIC_PAGE_IMAGES})</p>
+                          <label className={`adm-btn-secondary adm-page-images-upload ${sobreImagenes.length >= MAX_STATIC_PAGE_IMAGES ? "is-disabled" : ""}`}>
+                            Agregar foto
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: "none" }}
+                              disabled={sobreImagenes.length >= MAX_STATIC_PAGE_IMAGES}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.currentTarget.value = "";
+                                if (file) void subirImagenPagina("sobre-nosotros", file);
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {sobreImagenes.length ? (
+                          <div className="adm-page-images-grid">
+                            {sobreImagenes.map((url, index) => (
+                              <div className="adm-page-image-card" key={`${url}-${index}`}>
+                                <img src={url} alt={`Foto ${index + 1}`} className="adm-page-image-thumb" />
+                                <button type="button" className="adm-page-image-remove" onClick={() => quitarImagenPagina("sobre-nosotros", index)}>
+                                  Quitar
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="adm-page-images-empty">No hay fotos cargadas.</p>
+                        )}
+                      </div>
                     </div>
                     <div className="adm-notepad-footer">
-                      <label className="adm-btn-secondary" style={{ cursor: "pointer", textAlign: "center" }}>
-                        Subir imagen
-                        <input type="file" accept="image/*" style={{ display: "none" }} onChange={(event) => { const file = event.target.files?.[0]; if (file) void subirImagenSobre(file); }} />
-                      </label>
                       <span className="adm-notepad-ok">{sobreDraft.okMsg}</span>
                       <span className="adm-notepad-err">{sobreDraft.errMsg}</span>
                       <button className="adm-notepad-save" onClick={() => guardarPagina("sobre-nosotros")}>
@@ -1296,6 +2442,7 @@ export function Admin() {
                       <span className="adm-notepad-md-badge">LIVE</span>
                     </div>
                     <div className="adm-md-preview" dangerouslySetInnerHTML={{ __html: sobreHtml }} />
+                    <StaticPageGallery images={sobreImagenes} className="adm-page-preview-gallery" />
                   </div>
                 </div>
               </div>
@@ -1313,8 +2460,45 @@ export function Admin() {
                       <span className="adm-notepad-md-badge">MD</span>
                     </div>
                     <div className="adm-notepad-body">
+                      <p className="adm-md-hint">
+                        Guía rápida Markdown: <code>#</code> título grande, <code>##</code> subtítulo, <code>-</code> listas,
+                        <code> **texto** </code> negrita y <code>[texto](https://url)</code> para enlaces.
+                      </p>
                       <input className="adm-notepad-title-input" value={terminosDraft.titulo} onChange={(event) => setTerminosDraft((prev) => ({ ...prev, titulo: event.target.value }))} placeholder="Titulo" />
                       <textarea className="adm-notepad-textarea adm-page-textarea" value={terminosDraft.contenido} onChange={(event) => setTerminosDraft((prev) => ({ ...prev, contenido: event.target.value }))} placeholder="Contenido en markdown" />
+                      <div className="adm-page-images-panel">
+                        <div className="adm-page-images-head">
+                          <p className="adm-page-images-title">Fotos debajo ({terminosImagenes.length}/{MAX_STATIC_PAGE_IMAGES})</p>
+                          <label className={`adm-btn-secondary adm-page-images-upload ${terminosImagenes.length >= MAX_STATIC_PAGE_IMAGES ? "is-disabled" : ""}`}>
+                            Agregar foto
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: "none" }}
+                              disabled={terminosImagenes.length >= MAX_STATIC_PAGE_IMAGES}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.currentTarget.value = "";
+                                if (file) void subirImagenPagina("terminos", file);
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {terminosImagenes.length ? (
+                          <div className="adm-page-images-grid">
+                            {terminosImagenes.map((url, index) => (
+                              <div className="adm-page-image-card" key={`${url}-${index}`}>
+                                <img src={url} alt={`Foto ${index + 1}`} className="adm-page-image-thumb" />
+                                <button type="button" className="adm-page-image-remove" onClick={() => quitarImagenPagina("terminos", index)}>
+                                  Quitar
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="adm-page-images-empty">No hay fotos cargadas.</p>
+                        )}
+                      </div>
                     </div>
                     <div className="adm-notepad-footer">
                       <span className="adm-notepad-ok">{terminosDraft.okMsg}</span>
@@ -1332,6 +2516,7 @@ export function Admin() {
                       <span className="adm-notepad-md-badge">LIVE</span>
                     </div>
                     <div className="adm-md-preview" dangerouslySetInnerHTML={{ __html: terminosHtml }} />
+                    <StaticPageGallery images={terminosImagenes} className="adm-page-preview-gallery" />
                   </div>
                 </div>
               </div>
@@ -1362,7 +2547,7 @@ export function Admin() {
               </button>
               <button 
                 className={confirmacion.estado === 'entregado' ? 'adm-btn-primary' : 'adm-btn-primary'} 
-                style={{ background: confirmacion.estado === 'entregado' ? '#16A34A' : '#D4621A' }}
+                style={{ background: confirmacion.estado === 'entregado' ? '#16A34A' : '#6B3E26' }}
                 onClick={() => actualizarEstadoCanje(confirmacion.id, confirmacion.estado)}
                 disabled={busy}
               >

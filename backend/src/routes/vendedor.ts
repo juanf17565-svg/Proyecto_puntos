@@ -120,10 +120,13 @@ router.get("/canje/:codigo", async (req, res, next) => {
     const canje = await qOne(pool,
       `SELECT c.id, c.codigo_retiro, c.puntos_usados, c.estado, c.fecha_limite_retiro, c.notas,
               u.nombre AS cliente_nombre, u.dni AS cliente_dni,
-              p.nombre AS producto_nombre
+              p.nombre AS producto_nombre,
+              s.id AS sucursal_id, s.nombre AS sucursal_nombre, s.direccion AS sucursal_direccion,
+              s.piso AS sucursal_piso, s.localidad AS sucursal_localidad, s.provincia AS sucursal_provincia
        FROM canjes c
        JOIN usuarios u ON u.id = c.usuario_id
        JOIN productos p ON p.id = c.producto_id
+       LEFT JOIN sucursales s ON s.id = c.sucursal_id
        WHERE c.codigo_retiro = ?`,
       [codigo]
     );

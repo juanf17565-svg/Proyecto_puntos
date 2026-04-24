@@ -11,15 +11,39 @@ type CanjeProductoResponse = {
   codigo_retiro?: string | null;
   nuevo_saldo: number;
   puntos_usados: number;
+  dias_limite_retiro?: number;
+  fecha_limite_retiro?: string | null;
+  sucursal_id?: number | null;
+  sucursal?: SucursalRetiro | null;
+  lugar_retiro?: string | null;
+};
+
+type SucursalRetiro = {
+  id: number;
+  nombre: string;
+  direccion: string;
+  piso?: string | null;
+  localidad: string;
+  provincia: string;
 };
 
 type CatalogToast = {
   msg: string;
-  variant: "success" | "error" | "confirm" | "info";
+  variant: "success" | "error" | "info" | "redeem_notice";
   actionLabel?: string;
   onAction?: () => void;
   dismissLabel?: string;
   autoHideMs?: number;
+  title?: string;
+  codigoCanje?: string | null;
+  sucursalDetalle?: SucursalRetiro | null;
+  lugarRetiroTexto?: string;
+  diasLimiteRetiro?: number | null;
+};
+
+type CanjeConfirmState = {
+  producto: Producto;
+  onConfirm?: () => void;
 };
 
 function isLegacyCanjeCode(code?: string | null): boolean {
@@ -32,6 +56,16 @@ function getCanjeCode(data: CanjeProductoResponse): string | null {
   return null;
 }
 
+function formatSucursalLabel(sucursal: SucursalRetiro): string {
+  const piso = sucursal.piso ? `, Piso ${sucursal.piso}` : "";
+  return `${sucursal.nombre} - ${sucursal.direccion}${piso}, ${sucursal.localidad}, ${sucursal.provincia}`;
+}
+
+function getProductoImagen(producto: Producto): string | null {
+  if (producto.imagenes?.length) return producto.imagenes[0];
+  return producto.imagen_url ?? null;
+}
+
 export function Catalogo() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -40,6 +74,7 @@ export function Catalogo() {
 
   const [categoriaActiva, setCategoriaActiva] = useState("");
   const [maxPuntos, setMaxPuntos] = useState(0);
+  const [busquedaProducto, setBusquedaProducto] = useState("");
   const [productoModal, setProductoModal] = useState<Producto | null>(null);
   const [imgZoomed, setImgZoomed] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState("50% 50%");
@@ -47,6 +82,8 @@ export function Catalogo() {
   const dragRef = useRef<{ active: boolean; startX: number; startY: number; panX: number; panY: number } | null>(null);
   const hasDragged = useRef(false);
   const [toast, setToast] = useState<CatalogToast | null>(null);
+  const [sucursalRetiroId, setSucursalRetiroId] = useState("");
+  const [canjeConfirmState, setCanjeConfirmState] = useState<CanjeConfirmState | null>(null);
 
   const productosQuery = useQuery({
     queryKey: ["productos"],
@@ -58,8 +95,18 @@ export function Catalogo() {
     queryFn: () => api.get<string[]>("/productos/categorias"),
   });
 
+  const sucursalesQuery = useQuery({
+    queryKey: ["cliente", "sucursales-retiro"],
+    queryFn: () => api.get<SucursalRetiro[]>("/cliente/sucursales"),
+    enabled: isCliente,
+  });
+
   const productos = productosQuery.data ?? [];
   const categorias = categoriasQuery.data ?? [];
+  const sucursalesRetiro = sucursalesQuery.data ?? [];
+  const sucursalRetiroSeleccionada =
+    (sucursalRetiroId ? sucursalesRetiro.find((item) => String(item.id) === sucursalRetiroId) : undefined) ||
+    (sucursalesRetiro.length === 1 ? sucursalesRetiro[0] : undefined);
 
   const puntosMax = useMemo(() => {
     if (!productos.length) return 1000;
@@ -86,31 +133,54 @@ export function Catalogo() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    if (!isCliente) return;
+    if (sucursalesRetiro.length === 1) {
+      setSucursalRetiroId(String(sucursalesRetiro[0].id));
+      return;
+    }
+    if (!sucursalRetiroId) return;
+    const exists = sucursalesRetiro.some((item) => String(item.id) === sucursalRetiroId);
+    if (!exists) setSucursalRetiroId("");
+  }, [isCliente, sucursalRetiroId, sucursalesRetiro]);
+
   const productosFiltrados = useMemo(() => {
+    const q = busquedaProducto.trim().toLowerCase();
     return productos.filter((producto) => {
       const coincideCategoria = !categoriaActiva || producto.categoria === categoriaActiva;
       const coincidePuntos = !maxPuntos || producto.puntos_requeridos <= maxPuntos;
-      return coincideCategoria && coincidePuntos;
+      const texto = [producto.nombre, producto.descripcion || "", producto.categoria || ""].join(" ").toLowerCase();
+      const coincideBusqueda = !q || texto.includes(q);
+      return coincideCategoria && coincidePuntos && coincideBusqueda;
     });
-  }, [productos, categoriaActiva, maxPuntos]);
+  }, [productos, categoriaActiva, maxPuntos, busquedaProducto]);
 
   const canjearMutation = useMutation({
-    mutationFn: (productoId: number) =>
+    mutationFn: ({ productoId, sucursalId }: { productoId: number; sucursalId?: number }) =>
       api.post<CanjeProductoResponse>("/cliente/canjear-producto", {
         producto_id: productoId,
+        sucursal_id: sucursalId,
     }),
     onSuccess: (data) => {
       const codigoRetiro = getCanjeCode(data);
+      const sucursalElegida =
+        data.sucursal ??
+        (data.sucursal_id ? sucursalesRetiro.find((item) => item.id === data.sucursal_id) : undefined);
+      const lugarRetiro = sucursalElegida
+        ? formatSucursalLabel(sucursalElegida)
+        : (data.lugar_retiro || "informada por la administración").trim();
       updateUserPoints(data.nuevo_saldo);
       setToast({
-        msg: codigoRetiro
-          ? `Canje exitoso. Codigo de retiro: ${codigoRetiro}`
-          : "Canje exitoso. El codigo de retiro queda disponible en Mis Canjes.",
-        variant: "success",
-        actionLabel: "Ver en mi cuenta",
-        onAction: () => navigate("/mi-perfil#mis-canjes"),
-        dismissLabel: "Cerrar",
-        autoHideMs: 7000,
+        variant: "redeem_notice",
+        title: "Canje hecho con éxito",
+        msg: "Tu canje se registró correctamente.",
+        codigoCanje: codigoRetiro ?? "Disponible en Mis Canjes",
+        sucursalDetalle: sucursalElegida ?? null,
+        lugarRetiroTexto: lugarRetiro,
+        diasLimiteRetiro:
+          typeof data.dias_limite_retiro === "number" && data.dias_limite_retiro > 0
+            ? data.dias_limite_retiro
+            : null,
       });
     },
     onError: (error: Error) => {
@@ -136,6 +206,65 @@ export function Catalogo() {
   });
 
   const loading = productosQuery.isLoading || categoriasQuery.isLoading;
+
+  function abrirProducto(producto: Producto) {
+    setProductoModal(producto);
+    setImgZoomed(false);
+    setPan({ x: 0, y: 0 });
+    setZoomOrigin("50% 50%");
+  }
+
+  function prepararCanje(producto: Producto, onConfirm?: () => void) {
+    if (!user || user.rol !== "cliente") {
+      setToast({
+        msg: "Solo los clientes pueden canjear productos.",
+        variant: "info",
+        actionLabel: "Ir a login",
+        onAction: () => navigate("/login"),
+        dismissLabel: "Cerrar",
+        autoHideMs: 7000,
+      });
+      return;
+    }
+
+    if (!sucursalesRetiro.length) {
+      setToast({
+        msg: "No hay sucursales de retiro disponibles en este momento.",
+        variant: "error",
+        dismissLabel: "Cerrar",
+        autoHideMs: 7000,
+      });
+      return;
+    }
+
+    if (!sucursalRetiroId && sucursalesRetiro.length === 1) {
+      setSucursalRetiroId(String(sucursalesRetiro[0].id));
+    }
+
+    setCanjeConfirmState({ producto, onConfirm });
+  }
+
+  function confirmarCanjePendiente() {
+    if (!canjeConfirmState) return;
+    const sucursalElegida = sucursalRetiroSeleccionada || sucursalesRetiro[0];
+
+    if (sucursalesRetiro.length > 1 && !sucursalElegida) {
+      setToast({
+        msg: "Selecciona una sucursal de retiro antes de confirmar el canje.",
+        variant: "info",
+        dismissLabel: "Cerrar",
+        autoHideMs: 7000,
+      });
+      return;
+    }
+
+    canjearMutation.mutate({
+      productoId: canjeConfirmState.producto.id,
+      sucursalId: sucursalElegida?.id,
+    });
+    canjeConfirmState.onConfirm?.();
+    setCanjeConfirmState(null);
+  }
 
   return (
     <section className="catalog-page">
@@ -179,6 +308,15 @@ export function Catalogo() {
               </select>
             </div>
 
+            <div className="catalog-filter-search">
+              <input
+                className="catalog-filter-search-input"
+                placeholder="Buscar producto..."
+                value={busquedaProducto}
+                onChange={(event) => setBusquedaProducto(event.target.value)}
+              />
+            </div>
+
             <div className="catalog-filter-range">
               <div className="catalog-filter-range-header">
                 <label className="catalog-filter-label">Puntos maximos</label>
@@ -200,6 +338,7 @@ export function Catalogo() {
               onClick={() => {
                 setCategoriaActiva("");
                 setMaxPuntos(puntosMax);
+                setBusquedaProducto("");
               }}
             >
               Limpiar
@@ -229,11 +368,18 @@ export function Catalogo() {
 
             {productosFiltrados.map((producto) => (
               <div key={producto.id} className="product-card">
-                {producto.imagen_url ? (
-                  <img src={producto.imagen_url} alt={producto.nombre} className="product-card-img" />
-                ) : (
-                  <div className="product-card-placeholder" />
-                )}
+                <button
+                  type="button"
+                  className="product-card-media-btn"
+                  onClick={() => abrirProducto(producto)}
+                  aria-label={`Ver producto ${producto.nombre}`}
+                >
+                  {getProductoImagen(producto) ? (
+                    <img src={getProductoImagen(producto) as string} alt={producto.nombre} className="product-card-img" />
+                  ) : (
+                    <div className="product-card-placeholder" />
+                  )}
+                </button>
 
                 {producto.categoria ? <span className="product-card-cat">{producto.categoria}</span> : null}
 
@@ -259,7 +405,7 @@ export function Catalogo() {
 
                   <button
                     className="product-card-btn product-card-btn-ver"
-                    onClick={() => { setProductoModal(producto); setImgZoomed(false); setPan({ x: 0, y: 0 }); setZoomOrigin("50% 50%"); }}
+                    onClick={() => abrirProducto(producto)}
                   >
                     Ver producto
                   </button>
@@ -269,26 +415,7 @@ export function Catalogo() {
                       className="product-card-btn product-card-btn-canjear"
                       style={{ marginTop: "0.5rem" }}
                       disabled={canjearMutation.isPending}
-                      onClick={() => {
-                        if (user.rol !== "cliente") {
-                          setToast({
-                            msg: "Solo los clientes pueden canjear productos.",
-                            variant: "info",
-                            actionLabel: "Ir a login",
-                            onAction: () => navigate("/login"),
-                            dismissLabel: "Cerrar",
-                            autoHideMs: 7000,
-                          });
-                          return;
-                        }
-                        setToast({
-                          msg: `Canjear ${producto.nombre} por ${producto.puntos_requeridos} pts?`,
-                          variant: "confirm",
-                          actionLabel: "Confirmar canje",
-                          onAction: () => canjearMutation.mutate(producto.id),
-                          dismissLabel: "Cancelar",
-                        });
-                      }}
+                      onClick={() => prepararCanje(producto)}
                     >
                       Canjear producto
                     </button>
@@ -303,30 +430,94 @@ export function Catalogo() {
           </div>
         )}
       </div>
-      {toast ? (
-        toast.variant === "confirm" ? (
-          <div className="catalog-confirm-overlay" onClick={() => setToast(null)}>
-            <div
-              className={`catalog-float-toast catalog-float-toast-${toast.variant} catalog-float-toast-front`}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <p className="catalog-float-toast-msg">{toast.msg}</p>
-              <div className="catalog-float-toast-actions">
-                {toast.actionLabel && toast.onAction ? (
-                  <button
-                    className="catalog-float-toast-btn-primary"
-                    onClick={() => {
-                      toast.onAction?.();
-                      setToast(null);
-                    }}
-                  >
-                    {toast.actionLabel}
-                  </button>
-                ) : null}
-                <button className="catalog-float-toast-btn-secondary" onClick={() => setToast(null)}>
-                  {toast.dismissLabel ?? "Cerrar"}
-                </button>
+      {canjeConfirmState ? (
+        <div className="catalog-confirm-overlay" onClick={() => setCanjeConfirmState(null)}>
+          <div className="catalog-confirm-card" onClick={(event) => event.stopPropagation()}>
+            <p className="catalog-confirm-title">Confirmar canje</p>
+            <p className="catalog-confirm-msg">
+              Vas a canjear <strong>{canjeConfirmState.producto.nombre}</strong> por{" "}
+              <strong>{canjeConfirmState.producto.puntos_requeridos} pts</strong>.
+            </p>
+
+            <div className="catalog-confirm-field">
+              <label className="catalog-confirm-label" htmlFor="catalog-confirm-sucursal">
+                Sucursal donde vas a retirar
+              </label>
+              <select
+                id="catalog-confirm-sucursal"
+                className="catalog-pickup-select"
+                value={sucursalRetiroId}
+                onChange={(event) => setSucursalRetiroId(event.target.value)}
+                disabled={sucursalesQuery.isLoading || !sucursalesRetiro.length || canjearMutation.isPending}
+              >
+                {sucursalesRetiro.length > 1 ? <option value="">Selecciona una sucursal</option> : null}
+                {sucursalesRetiro.map((sucursal) => (
+                  <option key={sucursal.id} value={sucursal.id}>
+                    {sucursal.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {sucursalRetiroSeleccionada ? (
+              <div className="catalog-confirm-branch-detail">
+                <p><strong>Nombre:</strong> {sucursalRetiroSeleccionada.nombre}</p>
+                <p><strong>Direccion:</strong> {sucursalRetiroSeleccionada.direccion}</p>
+                {sucursalRetiroSeleccionada.piso ? <p><strong>Piso:</strong> {sucursalRetiroSeleccionada.piso}</p> : null}
+                <p><strong>Localidad:</strong> {sucursalRetiroSeleccionada.localidad}</p>
+                <p><strong>Provincia:</strong> {sucursalRetiroSeleccionada.provincia}</p>
               </div>
+            ) : (
+              <p className="catalog-confirm-hint">Selecciona una sucursal para ver los datos de retiro.</p>
+            )}
+
+            <div className="catalog-float-toast-actions">
+              <button
+                className="catalog-float-toast-btn-primary"
+                onClick={confirmarCanjePendiente}
+                disabled={canjearMutation.isPending || (sucursalesRetiro.length > 1 && !sucursalRetiroSeleccionada)}
+              >
+                {canjearMutation.isPending ? "Procesando..." : "Confirmar canje"}
+              </button>
+              <button className="catalog-float-toast-btn-secondary" onClick={() => setCanjeConfirmState(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {toast ? (
+        toast.variant === "redeem_notice" ? (
+          <div className="catalog-alert-overlay">
+            <div className="catalog-alert-card" role="alertdialog" aria-modal="true" aria-label="Aviso de retiro de canje">
+              <button className="catalog-alert-close" onClick={() => setToast(null)} aria-label="Cerrar aviso">✕</button>
+              <p className="catalog-alert-title">{toast.title ?? "Canje confirmado"}</p>
+              <p className="catalog-alert-msg">{toast.msg}</p>
+              <p className="catalog-alert-code">
+                Código de canje: <strong>{toast.codigoCanje ?? "Disponible en Mis Canjes"}</strong>
+              </p>
+              {toast.sucursalDetalle ? (
+                <div className="catalog-confirm-branch-detail catalog-alert-branch-detail">
+                  <p><strong>Nombre:</strong> {toast.sucursalDetalle.nombre}</p>
+                  <p><strong>Direccion:</strong> {toast.sucursalDetalle.direccion}</p>
+                  {toast.sucursalDetalle.piso ? <p><strong>Piso:</strong> {toast.sucursalDetalle.piso}</p> : null}
+                  <p><strong>Localidad:</strong> {toast.sucursalDetalle.localidad}</p>
+                  <p><strong>Provincia:</strong> {toast.sucursalDetalle.provincia}</p>
+                </div>
+              ) : (
+                <p className="catalog-alert-msg">
+                  Sucursal de retiro: <strong>{toast.lugarRetiroTexto ?? "informada por la administración"}</strong>
+                </p>
+              )}
+              <p className="catalog-alert-msg">
+                Para retirar tu producto, acercate a la sucursal indicada, presentá este código al vendedor y reclamá tu canje.
+              </p>
+              {toast.diasLimiteRetiro ? (
+                <p className="catalog-alert-expire">
+                  Tenes <strong>{toast.diasLimiteRetiro} dias</strong> para retirar este canje. Si no lo retiras dentro de ese plazo, el canje expira automaticamente.
+                </p>
+              ) : null}
             </div>
           </div>
         ) : (
@@ -358,9 +549,9 @@ export function Catalogo() {
             <button className="producto-modal-close" onClick={() => setProductoModal(null)}>✕</button>
 
             <div className="producto-modal-img-wrap">
-              {productoModal.imagen_url ? (
+              {getProductoImagen(productoModal) ? (
                 <img
-                  src={productoModal.imagen_url}
+                  src={getProductoImagen(productoModal) as string}
                   alt={productoModal.nombre}
                   className="producto-modal-img"
                   style={{
@@ -448,29 +639,7 @@ export function Catalogo() {
                 <button
                   className="product-card-btn product-card-btn-canjear"
                   disabled={canjearMutation.isPending}
-                  onClick={() => {
-                    if (user.rol !== "cliente") {
-                      setToast({
-                        msg: "Solo los clientes pueden canjear productos.",
-                        variant: "info",
-                        actionLabel: "Ir a login",
-                        onAction: () => navigate("/login"),
-                        dismissLabel: "Cerrar",
-                        autoHideMs: 7000,
-                      });
-                      return;
-                    }
-                    setToast({
-                      msg: `Canjear ${productoModal.nombre} por ${productoModal.puntos_requeridos} pts?`,
-                      variant: "confirm",
-                      actionLabel: "Confirmar canje",
-                      onAction: () => {
-                        canjearMutation.mutate(productoModal.id);
-                        setProductoModal(null);
-                      },
-                      dismissLabel: "Cancelar",
-                    });
-                  }}
+                  onClick={() => prepararCanje(productoModal, () => setProductoModal(null))}
                 >
                   Canjear producto
                 </button>

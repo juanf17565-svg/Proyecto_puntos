@@ -1,7 +1,9 @@
 ﻿import { useQuery } from "@tanstack/react-query";
 import { marked } from "marked";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { api } from "../../api";
+import { StaticPageGallery } from "../../components/StaticPageGallery";
+import { MAX_STATIC_PAGE_IMAGES, extractPageImageUrls, stripPageImages } from "../../lib/pageContent";
 
 type Pagina = {
   slug: string;
@@ -22,7 +24,9 @@ export function SobreNosotros() {
     queryFn: () => api.get<Pagina>("/paginas/sobre-nosotros"),
   });
 
-  const html = marked(paginaQuery.data?.contenido || "");
+  const contenido = paginaQuery.data?.contenido || "";
+  const imagenes = useMemo(() => extractPageImageUrls(contenido).slice(0, MAX_STATIC_PAGE_IMAGES), [contenido]);
+  const html = useMemo(() => marked(stripPageImages(contenido)), [contenido]);
 
   return (
     <section className="pagina-page">
@@ -34,6 +38,7 @@ export function SobreNosotros() {
           <div>
             <h1 className="pagina-title">{paginaQuery.data.titulo}</h1>
             <div className="pagina-content markdown-body" dangerouslySetInnerHTML={{ __html: html }} />
+            <StaticPageGallery images={imagenes} />
           </div>
         ) : null}
       </div>

@@ -22,6 +22,18 @@ type ReferralConfig = {
   nuev: number | null;
 };
 
+type SucursalRetiro = {
+  id: number;
+  nombre: string;
+  direccion: string;
+  piso: string | null;
+  localidad: string;
+  provincia: string;
+};
+
+const DEFAULT_INVITE_CODE_LENGTH = 9;
+const MIN_INVITE_CODE_LENGTH = 6;
+const MAX_INVITE_CODE_LENGTH = 20;
 const REDEEM_CODE_LENGTH = 9;
 const REDEEM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -68,6 +80,17 @@ async function getReferralPointsConfig(conn: Queryable): Promise<{ pointsInvitad
     pointsInvitador: Number(cfg?.inv ?? 50),
     pointsInvitado: Number(cfg?.nuev ?? 30),
   };
+}
+
+async function getInviteCodeLength(conn: Queryable = pool): Promise<number> {
+  const row = await qOne<{ valor: string }>(conn, "SELECT valor FROM configuracion WHERE clave = 'longitud_codigo_invitacion' LIMIT 1");
+  const parsed = Number(row?.valor ?? DEFAULT_INVITE_CODE_LENGTH);
+  if (!Number.isInteger(parsed)) return DEFAULT_INVITE_CODE_LENGTH;
+  return Math.max(MIN_INVITE_CODE_LENGTH, Math.min(MAX_INVITE_CODE_LENGTH, parsed));
+}
+
+function isValidInviteCode(code: string, length: number): boolean {
+  return new RegExp(`^[A-Z0-9]{${length}}$`).test(code);
 }
 
 router.get("/me", async (req, res) => {
@@ -166,14 +189,16 @@ router.post("/usar-codigo-invitacion", async (req, res) => {
 
   const usuarioId = req.user!.id;
   const codigo = parsed.data.codigo.trim().toUpperCase();
-  if (!/^[A-Z0-9]{9}$/.test(codigo)) {
-    res.status(400).json({ error: "El codigo de invitacion debe tener 9 caracteres alfanumericos" });
-    return;
-  }
   const conn = await pool.getConnection();
 
   try {
     await conn.beginTransaction();
+    const longitudCodigo = await getInviteCodeLength(conn);
+    if (!isValidInviteCode(codigo, longitudCodigo)) {
+      await conn.rollback();
+      res.status(400).json({ error: `El codigo de invitacion debe tener ${longitudCodigo} caracteres alfanumericos` });
+      return;
+    }
 
     const usuario = await qOne<PerfilCanje>(
       conn,
@@ -311,10 +336,25 @@ router.get("/movimientos", async (req, res) => {
 router.get("/canjes", async (req, res) => {
   const rows = await qAll(pool,
     `SELECT c.id, c.codigo_retiro, c.puntos_usados, c.estado, c.fecha_limite_retiro, c.notas, c.created_at,
-            p.nombre AS producto_nombre, p.imagen_url AS producto_imagen
-     FROM canjes c JOIN productos p ON p.id = c.producto_id
+            p.nombre AS producto_nombre, p.imagen_url AS producto_imagen,
+            s.id AS sucursal_id, s.nombre AS sucursal_nombre, s.direccion AS sucursal_direccion,
+            s.piso AS sucursal_piso, s.localidad AS sucursal_localidad, s.provincia AS sucursal_provincia
+     FROM canjes c
+     JOIN productos p ON p.id = c.producto_id
+     LEFT JOIN sucursales s ON s.id = c.sucursal_id
      WHERE c.usuario_id = ? ORDER BY c.created_at DESC`,
     [req.user!.id]
+  );
+  res.json(rows);
+});
+
+router.get("/sucursales", async (_req, res) => {
+  const rows = await qAll<SucursalRetiro>(
+    pool,
+    `SELECT id, nombre, direccion, piso, localidad, provincia
+     FROM sucursales
+     WHERE activo = 1
+     ORDER BY nombre ASC, id ASC`,
   );
   res.json(rows);
 });
@@ -385,11 +425,14 @@ router.post("/canjear-codigo", async (req, res) => {
 });
 
 router.post("/canjear-producto", async (req, res) => {
-  const schema = z.object({ producto_id: z.number().int().positive() });
+  const schema = z.object({
+    producto_id: z.number().int().positive(),
+    sucursal_id: z.number().int().positive().optional().nullable(),
+  });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "producto_id requerido" }); return; }
 
-  const { producto_id } = parsed.data;
+  const { producto_id, sucursal_id } = parsed.data;
   const usuarioId = req.user!.id;
 
   const faltantes = await validateProfileForRedeem(usuarioId);
@@ -421,14 +464,43 @@ router.post("/canjear-producto", async (req, res) => {
 
     const diasRow = await qOne(conn, "SELECT valor FROM configuracion WHERE clave = 'dias_limite_retiro'");
     const dias = parseInt(diasRow?.valor ?? "7", 10);
+    const sucursalesActivas = await qAll<SucursalRetiro>(
+      conn,
+      `SELECT id, nombre, direccion, piso, localidad, provincia
+       FROM sucursales
+       WHERE activo = 1
+       ORDER BY nombre ASC, id ASC`,
+    );
+    if (sucursalesActivas.length === 0) {
+      await conn.rollback();
+      res.status(400).json({ error: "No hay sucursales de retiro disponibles. Contacta a la administracion." });
+      return;
+    }
+
+    let sucursalSeleccionada: SucursalRetiro | undefined;
+    if (sucursal_id && Number.isFinite(sucursal_id)) {
+      sucursalSeleccionada = sucursalesActivas.find((item) => item.id === Number(sucursal_id));
+      if (!sucursalSeleccionada) {
+        await conn.rollback();
+        res.status(400).json({ error: "La sucursal seleccionada no esta disponible." });
+        return;
+      }
+    } else if (sucursalesActivas.length === 1) {
+      sucursalSeleccionada = sucursalesActivas[0];
+    } else {
+      await conn.rollback();
+      res.status(400).json({ error: "Debes seleccionar una sucursal para retirar el producto." });
+      return;
+    }
+
     const fechaLimite = new Date();
     fechaLimite.setDate(fechaLimite.getDate() + dias);
     const codigoRetiro = await uniqueRedeemCode(conn);
 
     const { insertId: canjeId } = await qRun(conn,
-      `INSERT INTO canjes (usuario_id, producto_id, codigo_retiro, puntos_usados, estado, fecha_limite_retiro)
-       VALUES (?, ?, ?, ?, 'pendiente', ?)`,
-      [usuarioId, producto_id, codigoRetiro, prod.puntos_requeridos, fechaLimite]
+      `INSERT INTO canjes (usuario_id, producto_id, sucursal_id, codigo_retiro, puntos_usados, estado, fecha_limite_retiro)
+       VALUES (?, ?, ?, ?, ?, 'pendiente', ?)`,
+      [usuarioId, producto_id, sucursalSeleccionada.id, codigoRetiro, prod.puntos_requeridos, fechaLimite]
     );
 
     await qRun(conn,
@@ -447,7 +519,13 @@ router.post("/canjear-producto", async (req, res) => {
       codigo_retiro: codigoRetiro,
       puntos_usados: prod.puntos_requeridos,
       nuevo_saldo: saldo - prod.puntos_requeridos,
+      dias_limite_retiro: dias,
       fecha_limite_retiro: fechaLimite,
+      sucursal_id: sucursalSeleccionada.id,
+      sucursal: sucursalSeleccionada,
+      lugar_retiro: `${sucursalSeleccionada.nombre} - ${sucursalSeleccionada.direccion}${
+        sucursalSeleccionada.piso ? `, Piso ${sucursalSeleccionada.piso}` : ""
+      }, ${sucursalSeleccionada.localidad}, ${sucursalSeleccionada.provincia}`,
     });
   } catch (err) {
     await conn.rollback();

@@ -17,9 +17,9 @@
   left: 0;
   right: 0;
   z-index: 40;
-  background: #D4621A;           /* ← color de fondo del navbar */
-  border-bottom: 1px solid #B85415; /* ← borde inferior del navbar */
-  box-shadow: 0 2px 12px rgba(180, 70, 10, 0.25); /* ← sombra del navbar */
+  background: #F5E6D3;
+  border-bottom: 1px solid #E6D3B8;
+  box-shadow: 0 6px 18px rgba(74, 44, 26, 0.14);
   height: 64px;
 }
 
@@ -48,7 +48,7 @@
 .navbar-logo-text {
   font-size: 1.2rem;
   font-weight: 800;
-  color: #ffffff;               /* ← color del texto "Ñandé" si no carga el logo */
+  color: #4A2C1A;
   letter-spacing: -0.5px;
 }
 
@@ -64,22 +64,22 @@
   padding: 0.45rem 0.85rem;
   border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.85); /* ← color de los links del navbar */
+  font-weight: 600;
+  color: #4A2C1A;
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
 .navbar-link:hover {
-  background: rgba(255, 255, 255, 0.15); /* ← fondo hover de los links del navbar */
-  color: #ffffff;                          /* ← color hover de los links del navbar */
+  background: #EEDCC7;
+  color: #3D2416;
 }
 
 .navbar-link.active {
-  background: rgba(255, 255, 255, 0.22); /* ← fondo del link activo (página actual) */
-  color: #ffffff;                         /* ← color del link activo */
-  font-weight: 600;
+  background: #E2CDB4;
+  color: #3D2416;
+  font-weight: 700;
 }
 
 /* Desktop auth area */
@@ -114,14 +114,14 @@
 }
 
 .navbar-name-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: #EEDCC7;
 }
 
 .navbar-name-caret {
   width: 7px;
   height: 7px;
-  border-right: 2px solid rgba(255, 255, 255, 0.85);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.85);
+  border-right: 2px solid #6B3E26;
+  border-bottom: 2px solid #6B3E26;
   transform: rotate(45deg) translateY(-1px);
   transition: transform 0.15s ease;
 }
@@ -135,10 +135,10 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 170px;
-  background: #ffffff;
-  border: 1px solid #F5C8A8;
+  background: #FFF8F0;
+  border: 1px solid #E6D3B8;
   border-radius: 10px;
-  box-shadow: 0 10px 24px rgba(61, 26, 2, 0.2);
+  box-shadow: 0 12px 24px rgba(74, 44, 26, 0.18);
   display: flex;
   flex-direction: column;
   padding: 0.35rem;
@@ -149,7 +149,7 @@
   text-align: left;
   border: none;
   background: transparent;
-  color: #3D1A02;
+  color: #4A2C1A;
   border-radius: 8px;
   text-decoration: none;
   font-size: 0.84rem;
@@ -160,29 +160,29 @@
 }
 
 .navbar-user-dropdown-item:hover {
-  background: #FEF3E8;
-  color: #D4621A;
+  background: #F3E3D1;
+  color: #6B3E26;
 }
 
 .navbar-user-dropdown-logout {
-  color: #B85415;
+  color: #A86A3D;
 }
 
 .navbar-points {
-  background: rgba(255, 255, 255, 0.2); /* ← fondo de la pastilla de puntos en navbar */
-  color: #ffffff;                         /* ← color del texto de puntos en navbar */
+  background: #6B3E26;
+  color: #ffffff;
   font-weight: 700;
   font-size: 0.82rem;
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  border: 1.5px solid rgba(255, 255, 255, 0.35); /* ← borde de la pastilla de puntos */
+  border: 1.5px solid #6B3E26;
   white-space: nowrap;
 }
 
 .navbar-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9); /* ← color del nombre de usuario en navbar */
+  color: #4A2C1A;
   max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -191,8 +191,8 @@
 
 .navbar-logout {
   font-size: 0.82rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);  /* ← color del botón "Salir" en navbar */
+  font-weight: 600;
+  color: #6B3E26;
   background: none;
   border: none;
   cursor: pointer;
@@ -203,43 +203,46 @@
 }
 
 .navbar-logout:hover {
-  background: rgba(255, 255, 255, 0.15); /* ← fondo hover del botón "Salir" */
-  color: #ffffff;                          /* ← color hover del botón "Salir" */
+  background: #EEDCC7;
+  color: #4A2C1A;
 }
 
 .navbar-btn-outline {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #ffffff;                            /* ← color texto del botón "Iniciar Sesión" en navbar */
+  color: #6B3E26;
   text-decoration: none;
   padding: 0.45rem 1rem;
-  border: 1.5px solid rgba(255, 255, 255, 0.6); /* ← borde del botón outline en navbar */
+  border: 1.5px solid #6B3E26;
   border-radius: 8px;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  background: #FFF8F0;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
 .navbar-btn-outline:hover {
-  background: rgba(255, 255, 255, 0.15);    /* ← fondo hover del botón outline en navbar */
-  border-color: rgba(255, 255, 255, 0.9);   /* ← borde hover del botón outline en navbar */
+  background: #F3E3D1;
+  border-color: #A86A3D;
+  color: #A86A3D;
 }
 
 .navbar-btn-solid {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #D4621A;               /* ← color texto del botón "Registrarse" en navbar */
+  color: #ffffff;
   text-decoration: none;
   padding: 0.45rem 1rem;
-  background: #ffffff;          /* ← fondo del botón "Registrarse" en navbar */
-  border: 1.5px solid #ffffff;
+  background: #6B3E26;
+  border: 1.5px solid #6B3E26;
   border-radius: 8px;
   transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
 .navbar-btn-solid:hover {
-  background: #FEF3E8;          /* ← fondo hover del botón "Registrarse" en navbar */
-  color: #B85415;               /* ← color hover texto del botón "Registrarse" */
+  background: #A86A3D;
+  color: #ffffff;
+  border-color: #A86A3D;
 }
 
 /* Hamburger (mobile only) */
@@ -260,7 +263,7 @@
   display: block;
   width: 22px;
   height: 2px;
-  background: #ffffff;          /* ← color de las líneas del menú hamburger */
+  background: #4A2C1A;
   border-radius: 2px;
   transition: all 0.2s ease;
 }
@@ -270,7 +273,7 @@
   position: fixed;
   inset: 0;
   z-index: 38;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(40, 24, 12, 0.12);
 }
 
 /* Mobile dropdown menu */
@@ -280,9 +283,9 @@
   left: 0;
   right: 0;
   z-index: 39;
-  background: #ffffff;          /* ← fondo del menú desplegable mobile */
-  border-bottom: 1px solid #F5C8A8; /* ← borde inferior del menú mobile */
-  box-shadow: 0 8px 20px rgba(180, 70, 10, 0.12); /* ← sombra del menú mobile */
+  background: #FFF8F0;
+  border-bottom: 1px solid #E6D3B8;
+  box-shadow: 0 10px 24px rgba(74, 44, 26, 0.14);
   padding: 0.75rem 1.25rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -293,22 +296,22 @@
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
   border-radius: 10px;
-  color: #3D1A02;               /* ← color de los links en el menú mobile */
+  color: #4A2C1A;
 }
 
 .navbar-mobile .navbar-link:hover {
-  background: #FEF3E8;          /* ← fondo hover de los links en el menú mobile */
-  color: #D4621A;               /* ← color hover de los links en el menú mobile */
+  background: #F3E3D1;
+  color: #6B3E26;
 }
 
 .navbar-mobile .navbar-link.active {
-  background: #FEF3E8;          /* ← fondo del link activo en el menú mobile */
-  color: #D4621A;               /* ← color del link activo en el menú mobile */
+  background: #EEDCC7;
+  color: #6B3E26;
 }
 
 .navbar-mobile-divider {
   height: 1px;
-  background: #F5C8A8;          /* ← color del separador en el menú mobile */
+  background: #E6D3B8;
   margin: 0.5rem 0;
 }
 
@@ -342,22 +345,22 @@
 }
 
 .navbar-mobile-user .navbar-name {
-  color: #3D1A02;               /* ← color del nombre de usuario en menú mobile */
+  color: #4A2C1A;
 }
 
 .navbar-mobile-user .navbar-points {
-  background: #FEF3E8;          /* ← fondo de la pastilla de puntos en menú mobile */
-  color: #D4621A;               /* ← color del texto de puntos en menú mobile */
-  border-color: #F5C8A8;        /* ← borde de la pastilla de puntos en menú mobile */
+  background: #6B3E26;
+  color: #ffffff;
+  border-color: #6B3E26;
 }
 
 .navbar-mobile-user .navbar-logout {
-  color: #A08060;               /* ← color del botón "Salir" en menú mobile */
+  color: #6B3E26;
 }
 
 .navbar-mobile-user .navbar-logout:hover {
-  background: #FEF3E8;          /* ← fondo hover del botón "Salir" en menú mobile */
-  color: #D4621A;
+  background: #F3E3D1;
+  color: #4A2C1A;
 }
 
 .navbar-mobile-btn {
@@ -371,22 +374,22 @@
   transition: background 0.15s ease;
 }
 
-/* Botón outline mobile */
+/* Button outline mobile */
 .navbar-mobile .navbar-btn-outline {
-  color: #D4621A;               /* ← color texto del botón outline en mobile */
-  border-color: #F5C8A8;        /* ← borde del botón outline en mobile */
+  color: #6B3E26;
+  border-color: #6B3E26;
 }
 
-/* Botón sólido mobile */
+/* Button solid mobile */
 .navbar-mobile .navbar-btn-solid {
-  background: #D4621A;          /* ← fondo del botón sólido en mobile */
-  color: #ffffff;               /* ← color texto del botón sólido en mobile */
-  border-color: #D4621A;
+  background: #6B3E26;
+  color: #ffffff;
+  border-color: #6B3E26;
 }
 
 .navbar-mobile .navbar-btn-solid:hover {
-  background: #B85415;          /* ← fondo hover del botón sólido en mobile */
-  border-color: #B85415;
+  background: #A86A3D;
+  border-color: #A86A3D;
 }
 
 /* ---- MAIN CONTENT OFFSET ---- */
@@ -423,24 +426,28 @@
   margin-top: auto;
 }
 
-/* El contenedor principal: 3 columnas en desktop, apilado en mobile */
 .footer-inner {
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: 0 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+  align-items: center;
+  gap: 1.5rem;
 }
 
-/* Cada columna */
 .footer-col {
   display: flex;
   flex-direction: column;
 }
 
-/* Izquierda: logo + tagline */
 .footer-col-left {
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 0.65rem;
+  min-width: 220px;
+  max-width: none;
+  justify-self: start;
 }
 
 .footer-logo {
@@ -473,46 +480,67 @@
   letter-spacing: 0.01em;
 }
 
-/* Centro: navegación */
 .footer-col-center {
-  align-items: flex-start;
-  gap: 0.55rem;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
 }
 
-.footer-link {
-  color: #A08060;               /* ← color de los links del footer */
-  text-decoration: none;
-  font-size: 0.875rem;
-  transition: color 0.15s ease;
-  line-height: 1.6;
-}
-
-.footer-link:hover {
-  color: #F5C8A8;               /* ← color hover de los links del footer */
-}
-
-/* Derecha: redes sociales */
-.footer-col-right {
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
-.footer-socials {
-  display: flex;
-  gap: 1rem;
-}
-
-.social-btn {
-  color: #A08060;               /* ← color de los iconos de redes sociales */
-  transition: color 0.15s ease, transform 0.15s ease;
+.footer-nav-inline {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
 }
 
-.social-btn:hover {
-  color: #F5C8A8;               /* ← color hover de los iconos de redes sociales */
-  transform: translateY(-2px);
+.footer-link {
+  color: #DCC7B2;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: color 0.15s ease;
+  line-height: 1.45;
+}
+
+.footer-link:hover {
+  color: #F5C8A8;
+}
+
+.footer-col-right {
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 220px;
+  justify-self: end;
+}
+
+.footer-badges {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.95rem;
+}
+
+.footer-badge {
+  display: block;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.95;
+  filter: brightness(1.08);
+}
+
+.footer-badge-hecho {
+  height: 98px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(232, 204, 170, 0.55);
+  box-shadow: 0 6px 16px rgba(40, 20, 8, 0.2);
+}
+
+.footer-badge-orgullo {
+  height: 132px;
+  margin-right: 1.35rem;
 }
 
 /* ==============================
@@ -534,15 +562,53 @@
     padding: 0 1rem;
   }
 
-  /* Footer mobile: centrar todo menos el tagline */
+  .footer {
+    padding: 1.7rem 1rem 1.55rem;
+  }
+
+  .footer-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 0;
+  }
+
   .footer-col {
     align-items: center;
     width: 100%;
+    min-width: 0;
+    max-width: none;
   }
 
   .footer-tagline {
-    align-self: flex-start;
-    text-align: left;
+    text-align: center;
+  }
+
+  .footer-nav-inline {
+    gap: 0.5rem 0.95rem;
+  }
+
+  .footer-link {
+    font-size: 0.92rem;
+  }
+
+  .footer-col-right {
+    align-items: center;
+  }
+
+  .footer-badges {
+    justify-content: center;
+  }
+
+  .footer-badge-hecho {
+    height: 60px;
+    border-radius: 12px;
+  }
+
+  .footer-badge-orgullo {
+    height: 54px;
+    margin-right: 0.55rem;
   }
 }
 
@@ -557,12 +623,134 @@
 /* Desktop footer: 3 columnas */
 @media (min-width: 768px) {
   .footer-inner {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+    justify-content: stretch;
   }
 
-  .footer-col-right {
-    align-items: flex-end;
+  .footer-col-right .footer-badges {
+    transform: translateX(-28px);
   }
 }
+
+/* ---- FLOATING WHATSAPP ---- */
+.floating-whatsapp {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: #25d366;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 26px rgba(18, 110, 53, 0.34);
+  z-index: 80;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  text-decoration: none;
+}
+
+.floating-whatsapp:hover {
+  background: #1ebe5d;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 14px 30px rgba(18, 110, 53, 0.4);
+}
+
+.floating-whatsapp:focus-visible {
+  outline: 3px solid rgba(37, 211, 102, 0.35);
+  outline-offset: 3px;
+}
+
+.floating-whatsapp svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .floating-whatsapp {
+    right: 12px;
+    bottom: 12px;
+    width: 52px;
+    height: 52px;
+  }
+
+  .floating-whatsapp svg {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* NAVBAR OVERRIDE: BROWN + LOGO HIGHLIGHT */
+.navbar {
+  background: #6B3E26;
+  border-bottom: 1px solid #5A321F;
+  box-shadow: 0 6px 18px rgba(45, 24, 14, 0.34);
+}
+
+.navbar-logo img {
+  background: #FFF8F0;
+  border-radius: 10px;
+  padding: 4px 8px;
+  box-shadow: 0 2px 10px rgba(36, 18, 10, 0.25);
+}
+
+.navbar-link,
+.navbar-name,
+.navbar-logout {
+  color: #FFF8F0;
+}
+
+.navbar-link:hover,
+.navbar-name-btn:hover,
+.navbar-logout:hover {
+  background: rgba(255, 248, 240, 0.16);
+  color: #FFFFFF;
+}
+
+.navbar-link.active {
+  background: rgba(255, 248, 240, 0.22);
+  color: #FFFFFF;
+}
+
+.navbar-name-caret {
+  border-right-color: #FFF8F0;
+  border-bottom-color: #FFF8F0;
+}
+
+.navbar-points {
+  background: #FFF8F0;
+  color: #6B3E26;
+  border-color: #FFF8F0;
+}
+
+.navbar-btn-outline {
+  color: #FFF8F0;
+  border-color: rgba(255, 248, 240, 0.72);
+  background: transparent;
+}
+
+.navbar-btn-outline:hover {
+  background: rgba(255, 248, 240, 0.16);
+  border-color: #FFF8F0;
+  color: #FFFFFF;
+}
+
+.navbar-btn-solid {
+  background: #F5E6D3;
+  border-color: #F5E6D3;
+  color: #4A2C1A;
+}
+
+.navbar-btn-solid:hover {
+  background: #FFF8F0;
+  border-color: #FFF8F0;
+  color: #4A2C1A;
+}
+
+.navbar-hamburger span {
+  background: #FFF8F0;
+}
+
