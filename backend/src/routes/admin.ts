@@ -365,22 +365,38 @@ router.post("/codigos", async (req, res) => {
     codigo:           z.string().min(3).max(50).transform((s) => s.toUpperCase().trim()),
     puntos_valor:     z.number().int().positive(),
     usos_maximos:     z.number().int().min(0).default(1),
-    fecha_expiracion: z.string().datetime().optional().nullable(),
+    fecha_expiracion: z.string().datetime({ offset: true }).optional().nullable(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
   const { codigo, puntos_valor, usos_maximos, fecha_expiracion } = parsed.data;
 
+  let fechaExpMysql: string | null = null;
+  if (fecha_expiracion) {
+    const date = new Date(fecha_expiracion);
+    if (Number.isNaN(date.getTime())) {
+      res.status(400).json({ error: "La fecha de expiración no es válida" });
+      return;
+    }
+    if (date.getTime() <= Date.now()) {
+      res.status(400).json({ error: "La fecha de expiración debe ser futura" });
+      return;
+    }
+    // MySQL DATETIME no acepta el sufijo "Z" ni los milisegundos del ISO 8601
+    fechaExpMysql = date.toISOString().slice(0, 19).replace("T", " ");
+  }
+
   try {
     const { insertId } = await qRun(pool,
       `INSERT INTO codigos_puntos (codigo, puntos_valor, usos_maximos, fecha_expiracion, creado_por)
        VALUES (?, ?, ?, ?, ?)`,
-      [codigo, puntos_valor, usos_maximos, fecha_expiracion ?? null, req.user!.id]
+      [codigo, puntos_valor, usos_maximos, fechaExpMysql, req.user!.id]
     );
     res.status(201).json({ id: insertId, codigo });
   } catch (err: any) {
     if (err.code === "ER_DUP_ENTRY") { res.status(409).json({ error: "Ya existe un código con ese nombre" }); return; }
-    throw err;
+    console.error("POST /admin/codigos:", err);
+    res.status(500).json({ error: "No se pudo crear el código" });
   }
 });
 
