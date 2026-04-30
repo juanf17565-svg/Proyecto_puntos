@@ -65,6 +65,7 @@ function getCanjeCode(canje: Canje): string {
 export function MisCanjes() {
   const [canjeFilter, setCanjeFilter] = useState<CanjeFilter>("todos");
   const [canjePage, setCanjePage] = useState(1);
+  const [copiadoCanjeId, setCopiadoCanjeId] = useState<number | null>(null);
 
   const canjesQuery = useQuery({
     queryKey: ["cliente", "canjes"],
@@ -108,6 +109,30 @@ export function MisCanjes() {
   useEffect(() => {
     setCanjePage(1);
   }, [canjeFilter, canjes.length]);
+
+  async function copiarCodigoCanje(canje: Canje) {
+    const code = getCanjeCode(canje);
+    if (!code || code === "Generando...") return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = code;
+        input.setAttribute("readonly", "true");
+        input.style.position = "absolute";
+        input.style.left = "-9999px";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+      setCopiadoCanjeId(canje.id);
+      window.setTimeout(() => setCopiadoCanjeId((prev) => (prev === canje.id ? null : prev)), 2000);
+    } catch {
+      setCopiadoCanjeId(null);
+    }
+  }
 
   return (
     <section className="dashboard-section perfil-dashboard-section">
@@ -168,9 +193,28 @@ export function MisCanjes() {
                       {formatDate(canje.created_at)}
                     </span>
                   </div>
-                  <p className="text-[10px] mt-1 uppercase font-bold tracking-wider" style={{ color: "#A08060" }}>
-                    Codigo: <span className="text-sm" style={{ color: "#D4621A" }}>{getCanjeCode(canje)}</span>
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+                    <p className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "#A08060", margin: 0 }}>
+                      Codigo: <span className="text-sm" style={{ color: "#D4621A" }}>{getCanjeCode(canje)}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void copiarCodigoCanje(canje)}
+                      disabled={getCanjeCode(canje) === "Generando..."}
+                      style={{
+                        border: "1px solid #E6D3B8",
+                        borderRadius: "8px",
+                        background: "#FFF8F0",
+                        color: "#6B3E26",
+                        fontWeight: 700,
+                        fontSize: "0.7rem",
+                        padding: "0.2rem 0.45rem",
+                        cursor: getCanjeCode(canje) === "Generando..." ? "default" : "pointer",
+                      }}
+                    >
+                      {copiadoCanjeId === canje.id ? "Copiado" : "Copiar"}
+                    </button>
+                  </div>
                   <p className="text-xs mt-1" style={{ color: "#A08060" }}>
                     Puntos usados: <strong style={{ color: "#5D3A1A" }}>{canje.puntos_usados}</strong>
                   </p>

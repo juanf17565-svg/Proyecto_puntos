@@ -190,9 +190,9 @@ router.post("/backup/full", async (req, res) => {
     });
     res.download(backup.archivePath, backup.fileName);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo generar el backup";
-    recordSecurityEvent("backup_full_error", req, { error: message });
-    res.status(500).json({ error: message });
+    const internalMessage = error instanceof Error ? error.message : "No se pudo generar el backup";
+    recordSecurityEvent("backup_full_error", req, { error: internalMessage });
+    res.status(500).json({ error: "No se pudo generar el backup en este momento" });
   }
 });
 

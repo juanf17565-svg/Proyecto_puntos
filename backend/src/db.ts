@@ -2,15 +2,78 @@ import "dotenv/config";
 import { randomInt } from "crypto";
 import mysql, { Pool, PoolConnection } from "mysql2/promise";
 
+const IS_PRODUCTION = (process.env.NODE_ENV || "").trim().toLowerCase() === "production";
+const WEAK_DB_PASSWORDS = new Set(["", "password", "123456", "nande_password"]);
+const WEAK_DB_USERS = new Set(["root", "admin", "nande_user"]);
+
+function readDbEnv(name: string, fallbackForDev: string): string {
+  const value = (process.env[name] || "").trim();
+  if (value) return value;
+  if (IS_PRODUCTION) {
+    throw new Error(`${name} no configurado. Definilo en backend/.env antes de iniciar en produccion.`);
+  }
+  return fallbackForDev;
+}
+
+function parseDbPort(raw: string): number {
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
+    if (IS_PRODUCTION) {
+      throw new Error(`MYSQL_PORT invalido: '${raw}'. Debe estar entre 1 y 65535.`);
+    }
+    return 3306;
+  }
+  return parsed;
+}
+
+function parseMysqlSslMode():
+  | undefined
+  | {
+      rejectUnauthorized: boolean;
+    } {
+  const mode = (process.env.MYSQL_SSL_MODE || "").trim().toLowerCase();
+  if (!mode || mode === "off" || mode === "false" || mode === "disabled") return undefined;
+  if (mode === "required" || mode === "require" || mode === "preferred") {
+    return { rejectUnauthorized: false };
+  }
+  if (mode === "verify-ca" || mode === "verify-full" || mode === "verify_identity") {
+    return { rejectUnauthorized: true };
+  }
+  if (IS_PRODUCTION) {
+    throw new Error(`MYSQL_SSL_MODE invalido: '${mode}'. Usa off|required|verify-ca.`);
+  }
+  return undefined;
+}
+
+const dbHost = readDbEnv("MYSQL_HOST", "localhost");
+const dbPort = parseDbPort(readDbEnv("MYSQL_PORT", "3306"));
+const dbName = readDbEnv("MYSQL_DATABASE", "nande_puntos");
+const dbUser = readDbEnv("MYSQL_USER", "nande_user");
+const dbPassword = readDbEnv("MYSQL_PASSWORD", "nande_password");
+const dbSsl = parseMysqlSslMode();
+
+if (IS_PRODUCTION) {
+  if (WEAK_DB_PASSWORDS.has(dbPassword.toLowerCase())) {
+    throw new Error("MYSQL_PASSWORD debil o por defecto detectado. Configura una clave fuerte para produccion.");
+  }
+  if (WEAK_DB_USERS.has(dbUser.toLowerCase())) {
+    throw new Error("MYSQL_USER inseguro para produccion. Crea un usuario dedicado con privilegios minimos.");
+  }
+}
+
 export const pool = mysql.createPool({
-  host:     process.env.MYSQL_HOST     || "localhost",
-  port:     Number(process.env.MYSQL_PORT) || 3306,
-  database: process.env.MYSQL_DATABASE || "nande_puntos",
-  user:     process.env.MYSQL_USER     || "nande_user",
-  password: process.env.MYSQL_PASSWORD || "nande_password",
+  host: dbHost,
+  port: dbPort,
+  database: dbName,
+  user: dbUser,
+  password: dbPassword,
+  ssl: dbSsl,
   charset:  "utf8mb4",          /* ← codificación para tildes y ñ */
   waitForConnections: true,
   connectionLimit: 10,
+  multipleStatements: false,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10_000,
   timezone: "Z",
 });
 

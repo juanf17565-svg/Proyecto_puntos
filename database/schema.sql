@@ -23,6 +23,7 @@ USE nande_puntos;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS movimientos_puntos;
+DROP TABLE IF EXISTS eventos_seguridad;
 DROP TABLE IF EXISTS canje_items;
 DROP TABLE IF EXISTS canjes;
 DROP TABLE IF EXISTS sucursales;
@@ -338,6 +339,26 @@ CREATE TABLE IF NOT EXISTS paginas_contenido (
 );
 
 -- ============================================================
+-- TABLA: eventos_seguridad
+-- Auditoria de seguridad de accesos bloqueados y eventos clave.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS eventos_seguridad (
+    id                      BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    evento                  VARCHAR(120)    NOT NULL,
+    ip                      VARCHAR(64)     NOT NULL,
+    metodo                  VARCHAR(12)     NOT NULL,
+    ruta                    VARCHAR(255)    NOT NULL,
+    origen                  VARCHAR(255)    NOT NULL,
+    agente_usuario          VARCHAR(255)    NOT NULL,
+    detalles_json           JSON            NULL,
+    created_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_eventos_seguridad_created_at (created_at),
+    INDEX idx_eventos_seguridad_evento_created_at (evento, created_at),
+    INDEX idx_eventos_seguridad_ip_created_at (ip, created_at)
+);
+
+-- ============================================================
 -- SEED: configuración global
 -- ============================================================
 
@@ -382,35 +403,23 @@ INSERT INTO paginas_contenido (slug, titulo, contenido) VALUES
 ON DUPLICATE KEY UPDATE slug = slug;
 
 -- ============================================================
--- SEED: usuarios de prueba
---
--- admin      → email: admin@nande.com      / pass: admin123
--- vendedor   → email: vendedor@nande.com   / pass: vendedor123
--- cliente    → email: cliente@nande.com    / pass: cliente123
---
--- ¡Cambiar contraseñas antes de producción!
+-- SEED: administradores iniciales (produccion)
+-- NandeAlfajoresCorrentinos1@protonmail.com / Nande_2026_Alfajores1
+-- NandeAlfajoresCorrentinos2@protonmail.com / Nande_2026_Alfajores2
 -- ============================================================
-
 INSERT INTO usuarios (nombre, email, password_hash, rol, activo) VALUES
 (
-    'Administrador',
-    'admin@nande.com',
-    '$2a$10$HEM7Iz0RkrdFwrHLQG0tqONTOohsDZiZnmjDfSIJNOufn0xX/1LlS',
+    'Administrador 1',
+    'NandeAlfajoresCorrentinos1@protonmail.com',
+    '$2a$10$414cDd/a/On5MvCZCWQ9uuaAFOgv3zPboxokQt2Dya6XQU2VN.rN.',
     'admin',
     1
 ),
 (
-    'Vendedor Demo',
-    'vendedor@nande.com',
-    '$2a$10$ieKqT4knbgcClgVfOKEeE.IxAXQM95q76j3KGFtpY1W7XyQQ0wyK6',
-    'vendedor',
-    1
-),
-(
-    'Cliente Demo',
-    'cliente@nande.com',
-    '$2a$10$6yOzuxgZ6g4PqPOeGVXYoOwEr7I0NVEbuJU7744z3qqZbxglkF1Jy',
-    'cliente',
+    'Administrador 2',
+    'NandeAlfajoresCorrentinos2@protonmail.com',
+    '$2a$10$vO0.sc08ZUwx/zcSgLevjeiwLEnzZqT4IuAwBeGsdEccKX73CTBuu',
+    'admin',
     1
 )
 ON DUPLICATE KEY UPDATE email = email;

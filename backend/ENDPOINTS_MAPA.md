@@ -3,11 +3,12 @@
 ## Base
 - API base: `/api`
 - Salud: `GET /api/health`
-- Diagnostico publico:
+- Diagnostico (restringido):
   - `GET /diagnostico` (estado API + DB)
   - `GET /diagnostico/db` (solo DB)
   - `GET /api/diagnostico` (alias)
   - `GET /api/diagnostico/db` (alias)
+  - Acceso: admin autenticado o header `X-Diagnostico-Token` (`DIAGNOSTICO_TOKEN`).
 - Archivos estaticos:
   - `GET /uploads/:archivo`
   - `GET /api/uploads/:archivo`

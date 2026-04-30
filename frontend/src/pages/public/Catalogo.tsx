@@ -1,6 +1,6 @@
 ﻿import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import type { Producto } from "../../types";
@@ -73,6 +73,7 @@ function getProductoImagen(producto: Producto): string | null {
 
 export function Catalogo() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const updateUserPoints = useAuthStore((state) => state.updateUserPoints);
   const isCliente = user?.rol === "cliente";
@@ -90,6 +91,9 @@ export function Catalogo() {
   const [sucursalRetiroId, setSucursalRetiroId] = useState("");
   const [canjeCart, setCanjeCart] = useState<Record<number, number>>({});
   const [canjeConfirmOpen, setCanjeConfirmOpen] = useState(false);
+  const [cantidadesSeleccionadas, setCantidadesSeleccionadas] = useState<Record<number, number>>({});
+  const [cantidadModalCanje, setCantidadModalCanje] = useState(1);
+  const [codigoCopiado, setCodigoCopiado] = useState(false);
 
   const productosQuery = useQuery({
     queryKey: ["productos"],
@@ -138,6 +142,25 @@ export function Catalogo() {
     }, toast.autoHideMs);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (toast?.variant !== "redeem_notice") {
+      setCodigoCopiado(false);
+    }
+  }, [toast?.variant]);
+
+  useEffect(() => {
+    const state = location.state as { accessDeniedNotice?: string } | null;
+    const deniedMessage = state?.accessDeniedNotice?.trim();
+    if (!deniedMessage) return;
+    setToast({
+      msg: deniedMessage,
+      variant: "error",
+      dismissLabel: "Cerrar",
+      autoHideMs: 10000,
+    });
+    navigate("/catalogo", { replace: true });
+  }, [location.state, navigate]);
 
   useEffect(() => {
     if (!isCliente) return;
@@ -241,12 +264,13 @@ export function Catalogo() {
 
   function abrirProducto(producto: Producto) {
     setProductoModal(producto);
+    setCantidadModalCanje(1);
     setImgZoomed(false);
     setPan({ x: 0, y: 0 });
     setZoomOrigin("50% 50%");
   }
 
-  function agregarProductoAlCarrito(producto: Producto, onAdded?: () => void) {
+  function agregarProductoAlCarrito(producto: Producto, onAdded?: () => void, cantidad = 1) {
     if (!user || user.rol !== "cliente") {
       setToast({
         msg: "Solo los clientes pueden canjear productos.",
@@ -260,12 +284,37 @@ export function Catalogo() {
     }
 
     if (canjearCarritoMutation.isPending) return;
+    const cantidadSafe = Number.isInteger(cantidad) && cantidad > 0 ? cantidad : 1;
 
     setCanjeCart((prev) => ({
       ...prev,
-      [producto.id]: (prev[producto.id] || 0) + 1,
+      [producto.id]: (prev[producto.id] || 0) + cantidadSafe,
     }));
     onAdded?.();
+  }
+
+  async function copiarCodigoCanje() {
+    const code = toast?.codigoCanje?.trim();
+    if (!code || code === "Disponible en Mis Canjes") return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = code;
+        input.setAttribute("readonly", "true");
+        input.style.position = "absolute";
+        input.style.left = "-9999px";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+      setCodigoCopiado(true);
+      window.setTimeout(() => setCodigoCopiado(false), 2200);
+    } catch {
+      setCodigoCopiado(false);
+    }
   }
 
   function incrementarCarrito(productoId: number) {
@@ -353,6 +402,19 @@ export function Catalogo() {
 
   function vaciarCarritoCanje() {
     setCanjeCart({});
+  }
+
+  function getCantidadSeleccionada(productoId: number): number {
+    const value = cantidadesSeleccionadas[productoId];
+    return Number.isInteger(value) && value > 0 ? value : 1;
+  }
+
+  function ajustarCantidadSeleccionada(productoId: number, delta: number) {
+    setCantidadesSeleccionadas((prev) => {
+      const actual = Number.isInteger(prev[productoId]) && prev[productoId] > 0 ? prev[productoId] : 1;
+      const next = Math.max(1, Math.min(100, actual + delta));
+      return { ...prev, [productoId]: next };
+    });
   }
 
   return (
@@ -577,14 +639,48 @@ export function Catalogo() {
                   </button>
 
                   {user ? (
-                    <button
-                      className="product-card-btn product-card-btn-canjear"
-                      style={{ marginTop: "0.5rem" }}
-                      disabled={canjearCarritoMutation.isPending}
-                      onClick={() => agregarProductoAlCarrito(producto)}
-                    >
-                      Agregar al carrito
-                    </button>
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", marginTop: "0.5rem" }}>
+                        <button
+                          type="button"
+                          className="vendedor-round-btn"
+                          disabled={canjearCarritoMutation.isPending || getCantidadSeleccionada(producto.id) <= 1}
+                          onClick={() => ajustarCantidadSeleccionada(producto.id, -1)}
+                        >
+                          -
+                        </button>
+                        <span style={{ minWidth: "28px", textAlign: "center", fontWeight: 700, color: "#4A2C1A" }}>
+                          {getCantidadSeleccionada(producto.id)}
+                        </span>
+                        <button
+                          type="button"
+                          className="vendedor-round-btn"
+                          disabled={canjearCarritoMutation.isPending}
+                          onClick={() => ajustarCantidadSeleccionada(producto.id, +1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        className="product-card-btn product-card-btn-canjear"
+                        style={{ marginTop: "0.5rem" }}
+                        disabled={canjearCarritoMutation.isPending}
+                        onClick={() =>
+                          agregarProductoAlCarrito(
+                            producto,
+                            () =>
+                              setCantidadesSeleccionadas((prev) => {
+                                const next = { ...prev };
+                                delete next[producto.id];
+                                return next;
+                              }),
+                            getCantidadSeleccionada(producto.id)
+                          )
+                        }
+                      >
+                        Agregar al carrito
+                      </button>
+                    </>
                   ) : (
                     <Link to="/login" className="product-card-btn product-card-btn-login" style={{ marginTop: "0.5rem" }}>
                       Iniciar sesion para canjear
@@ -668,9 +764,20 @@ export function Catalogo() {
               <button className="catalog-alert-close" onClick={() => setToast(null)} aria-label="Cerrar aviso">✕</button>
               <p className="catalog-alert-title">{toast.title ?? "Canje confirmado"}</p>
               <p className="catalog-alert-msg">{toast.msg}</p>
-              <p className="catalog-alert-code">
-                Código de canje: <strong>{toast.codigoCanje ?? "Disponible en Mis Canjes"}</strong>
-              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+                <p className="catalog-alert-code">
+                  Código de canje: <strong>{toast.codigoCanje ?? "Disponible en Mis Canjes"}</strong>
+                </p>
+                <button
+                  type="button"
+                  className="catalog-float-toast-btn-secondary"
+                  style={{ padding: "0.35rem 0.62rem" }}
+                  onClick={() => void copiarCodigoCanje()}
+                  disabled={!toast.codigoCanje || toast.codigoCanje === "Disponible en Mis Canjes"}
+                >
+                  {codigoCopiado ? "Copiado" : "Copiar"}
+                </button>
+              </div>
               {toast.sucursalDetalle ? (
                 <div className="catalog-confirm-branch-detail catalog-alert-branch-detail">
                   <p><strong>Nombre:</strong> {toast.sucursalDetalle.nombre}</p>
@@ -810,13 +917,34 @@ export function Catalogo() {
               </div>
 
               {user ? (
-                <button
-                  className="product-card-btn product-card-btn-canjear"
-                  disabled={canjearCarritoMutation.isPending}
-                  onClick={() => agregarProductoAlCarrito(productoModal, () => setProductoModal(null))}
-                >
-                  Agregar al carrito
-                </button>
+                <>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.55rem", marginBottom: "0.65rem" }}>
+                    <button
+                      type="button"
+                      className="vendedor-round-btn"
+                      onClick={() => setCantidadModalCanje((prev) => Math.max(1, prev - 1))}
+                    >
+                      -
+                    </button>
+                    <span style={{ minWidth: "26px", textAlign: "center", fontWeight: 700, color: "#4A2C1A" }}>
+                      {cantidadModalCanje}
+                    </span>
+                    <button
+                      type="button"
+                      className="vendedor-round-btn"
+                      onClick={() => setCantidadModalCanje((prev) => Math.min(100, prev + 1))}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <button
+                    className="product-card-btn product-card-btn-canjear"
+                    disabled={canjearCarritoMutation.isPending}
+                    onClick={() => agregarProductoAlCarrito(productoModal, () => setProductoModal(null), cantidadModalCanje)}
+                  >
+                    Agregar {cantidadModalCanje > 1 ? `${cantidadModalCanje} al carrito` : "al carrito"}
+                  </button>
+                </>
               ) : (
                 <Link to="/login" className="product-card-btn product-card-btn-login">
                   Iniciar sesion para canjear
@@ -829,3 +957,4 @@ export function Catalogo() {
     </section>
   );
 }
+

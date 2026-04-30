@@ -13,6 +13,7 @@ const googleClient = new OAuth2Client();
 const DEFAULT_INVITE_CODE_LENGTH = 9;
 const MIN_INVITE_CODE_LENGTH = 6;
 const MAX_INVITE_CODE_LENGTH = 20;
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(24).toString("hex"), 10);
 
 // Política:
 // - Mínimo 12 caracteres (priorizamos longitud sobre "complejidad" artificial).
@@ -228,7 +229,9 @@ router.post("/login", loginPairLimiter, async (req, res) => {
     [email]
   );
 
-  if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+  const passwordHash = user?.password_hash || DUMMY_PASSWORD_HASH;
+  const validPassword = await bcrypt.compare(password, passwordHash);
+  if (!user || !validPassword) {
     res.status(401).json({ error: "Credenciales invalidas" });
     return;
   }

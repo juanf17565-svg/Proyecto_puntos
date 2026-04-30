@@ -53,12 +53,12 @@ export function Navbar() {
 
       <nav className="navbar">
         <div className="navbar-inner">
-          <Link to="/" className="navbar-logo" onClick={closeMenu}>
+          <Link to="/catalogo" className="navbar-logo" onClick={closeMenu}>
             <img src="/logo.png" alt="Nande" />
           </Link>
 
           <div className="navbar-links">
-            <NavLink to="/" className={({ isActive }) => navClass(isActive)}>Catalogo</NavLink>
+            <NavLink to="/catalogo" className={({ isActive }) => navClass(isActive)}>Catalogo</NavLink>
             {!canSeeVendedor ? <NavLink to="/sobre-nosotros" className={({ isActive }) => navClass(isActive)}>Quienes Somos</NavLink> : null}
             {!canSeeVendedor ? <NavLink to="/terminos" className={({ isActive }) => navClass(isActive)}>Terminos</NavLink> : null}
             {canSeeCliente ? <NavLink to="/cliente" className={({ isActive }) => navClass(isActive)}>Puntos</NavLink> : null}
@@ -133,7 +133,7 @@ export function Navbar() {
 
       {menuOpen ? (
         <div className="navbar-mobile">
-          <NavLink to="/" className={({ isActive }) => navClass(isActive)} onClick={closeMenu}>Catalogo</NavLink>
+          <NavLink to="/catalogo" className={({ isActive }) => navClass(isActive)} onClick={closeMenu}>Catalogo</NavLink>
           {!canSeeVendedor ? <NavLink to="/sobre-nosotros" className={({ isActive }) => navClass(isActive)} onClick={closeMenu}>Quienes Somos</NavLink> : null}
           {!canSeeVendedor ? <NavLink to="/terminos" className={({ isActive }) => navClass(isActive)} onClick={closeMenu}>Terminos</NavLink> : null}
           {canSeeCliente ? <NavLink to="/cliente" className={({ isActive }) => navClass(isActive)} onClick={closeMenu}>Puntos</NavLink> : null}

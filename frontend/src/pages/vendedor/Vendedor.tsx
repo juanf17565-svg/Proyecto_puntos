@@ -266,9 +266,12 @@ export function Vendedor() {
               <div className="mt-4 rounded-xl p-4" style={{ background: "#FEF3E8", border: "1px solid #F5C8A8" }}>
             <p className="text-xs uppercase font-bold tracking-wider mb-2" style={{ color: "#A08060" }}>Detalle del canje</p>
             <div style={{ display: "grid", gap: "0.3rem" }}>
-              <p className="text-sm"><strong>Producto:</strong> {canjeInfo.producto_nombre}</p>
-              {canjeInfo.items && canjeInfo.items.length > 1 ? (
+              <p className="text-sm"><strong>Producto principal:</strong> {canjeInfo.producto_nombre}</p>
+              {canjeInfo.items?.length ? (
                 <div className="text-xs" style={{ color: "#A08060" }}>
+                  <p style={{ margin: "0 0 0.2rem", fontWeight: 700 }}>
+                    Productos ({canjeInfo.total_unidades ?? canjeInfo.items.reduce((acc, item) => acc + item.cantidad, 0)} unidades):
+                  </p>
                   {canjeInfo.items.map((item) => (
                     <p key={`${item.producto_id}-${item.cantidad}`} style={{ margin: "0.1rem 0" }}>
                       • {item.producto_nombre} x{item.cantidad}

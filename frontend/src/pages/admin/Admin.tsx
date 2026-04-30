@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useEffect, useMemo, useState, type DragEvent } from "react";
 import { api } from "../../api";
 import { StaticPageGallery } from "../../components/StaticPageGallery";
@@ -24,6 +24,24 @@ type Stats = {
   codigos_activos: number;
   canjes_pendientes: number;
   puntos_emitidos: number;
+};
+
+type SecurityEventPersisted = {
+  id: number;
+  creado_en: string;
+  evento: string;
+  ip: string;
+  metodo: string;
+  ruta: string;
+  origen: string;
+  agente_usuario: string;
+  detalles: Record<string, unknown> | null;
+};
+
+type SecurityMonitorResponse = {
+  counters: Record<string, number>;
+  recent: Array<Record<string, unknown>>;
+  persistidos: SecurityEventPersisted[];
 };
 
 type Usuario = {
@@ -84,6 +102,35 @@ type CanjeAdmin = {
   created_at: string;
   cliente_nombre: string;
   cliente_email: string;
+  cliente_dni: string;
+  producto_nombre: string;
+  productos_detalle?: string;
+  total_items?: number;
+  total_unidades?: number;
+  items?: Array<{
+    producto_id: number;
+    producto_nombre: string;
+    producto_imagen: string | null;
+    cantidad: number;
+    puntos_unitarios: number;
+    puntos_total: number;
+  }>;
+  sucursal_id?: number | null;
+  sucursal_nombre?: string | null;
+  sucursal_direccion?: string | null;
+  sucursal_piso?: string | null;
+  sucursal_localidad?: string | null;
+  sucursal_provincia?: string | null;
+};
+
+type CanjeCodigoAdmin = {
+  id: number;
+  codigo_retiro: string;
+  puntos_usados: number;
+  estado: "pendiente" | "entregado" | "no_disponible" | "expirado" | "cancelado";
+  fecha_limite_retiro: string | null;
+  notas: string | null;
+  cliente_nombre: string;
   cliente_dni: string;
   producto_nombre: string;
   productos_detalle?: string;
@@ -214,12 +261,12 @@ function getCanjeCode(canje: Pick<CanjeAdmin, "id" | "codigo_retiro">): string {
 
 function formatMovimientoTipo(tipo: string): string {
   const labels: Record<string, string> = {
-    asignacion_manual: "Asignación manual",
-    codigo_canje: "Canje de código",
+    asignacion_manual: "Asignacion manual",
+    codigo_canje: "Canje de codigo",
     referido_invitador: "Puntos por invitar",
     referido_invitado: "Puntos por registro referido",
     canje_producto: "Canje de producto",
-    devolucion_canje: "Devolución por canje",
+    devolucion_canje: "Devolucion por canje",
     ajuste: "Ajuste",
   };
   return labels[tipo] ?? tipo.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -324,6 +371,13 @@ export function Admin() {
   const [okMsg, setOkMsg] = useState("");
   const [errMsg, setErrMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mobileAdminNavOpen, setMobileAdminNavOpen] = useState(false);
+  const [inicioMovimientosOpen, setInicioMovimientosOpen] = useState<boolean>(
+    () => (typeof window !== "undefined" ? window.innerWidth > 640 : true)
+  );
+  const [inicioSeguridadOpen, setInicioSeguridadOpen] = useState<boolean>(
+    () => (typeof window !== "undefined" ? window.innerWidth > 640 : true)
+  );
 
   const [nuevoProducto, setNuevoProducto] = useState<ProductoForm>(emptyProductoForm());
   const [editId, setEditId] = useState<number | null>(null);
@@ -401,6 +455,12 @@ export function Admin() {
   });
 
   const [confirmacion, setConfirmacion] = useState<ConfirmacionCanje | null>(null);
+  const [codigoCanjeAdmin, setCodigoCanjeAdmin] = useState("");
+  const [canjeCodigoAdmin, setCanjeCodigoAdmin] = useState<CanjeCodigoAdmin | null>(null);
+  const [canjeCodigoAdminErr, setCanjeCodigoAdminErr] = useState("");
+  const [canjeCodigoAdminOk, setCanjeCodigoAdminOk] = useState("");
+  const [buscandoCanjeAdmin, setBuscandoCanjeAdmin] = useState(false);
+  const [procesandoCanjeAdmin, setProcesandoCanjeAdmin] = useState(false);
 
   const statsQuery = useQuery({
     queryKey: ["admin", "stats"],
@@ -445,6 +505,11 @@ export function Admin() {
   const configuracionQuery = useQuery({
     queryKey: ["admin", "configuracion"],
     queryFn: () => api.get<ConfiguracionItem[]>("/admin/configuracion"),
+  });
+
+  const securityMonitorQuery = useQuery({
+    queryKey: ["admin", "security-monitor"],
+    queryFn: () => api.get<SecurityMonitorResponse>("/admin/security/monitor?limit=80"),
   });
 
   const sobreQuery = useQuery({
@@ -539,6 +604,14 @@ export function Admin() {
   const codigos = codigosQuery.data ?? [];
   const canjes = canjesQuery.data ?? [];
   const sucursales = sucursalesQuery.data ?? [];
+  const securityEvents = securityMonitorQuery.data?.persistidos ?? [];
+  const blockedAccessEvents = useMemo(
+    () =>
+      securityEvents
+        .filter((event) => event.evento === "acceso_ruta_restringida_bloqueado")
+        .slice(0, 20),
+    [securityEvents]
+  );
   const totalMovimientosInicioPages = Math.max(1, Math.ceil(movimientos.length / MOVIMIENTOS_INICIO_POR_PAGINA));
 
   useEffect(() => {
@@ -676,7 +749,7 @@ export function Admin() {
 
     const currentCount = target === "nuevo" ? nuevoProducto.imagenes.length : editDraft.imagenes.length;
     if (currentCount >= MAX_PRODUCT_IMAGES) {
-      setErrMsg(`Solo puedes cargar hasta ${MAX_PRODUCT_IMAGES} imágenes por producto.`);
+      setErrMsg(`Solo puedes cargar hasta ${MAX_PRODUCT_IMAGES} imÃ¡genes por producto.`);
       return;
     }
 
@@ -709,12 +782,12 @@ export function Admin() {
     const slotsAvailable = Math.max(0, MAX_PRODUCT_IMAGES - current);
     const accepted = files.filter((file) => file.type.startsWith("image/")).slice(0, slotsAvailable);
     if (!accepted.length) {
-      setErrMsg(`Arrastra imágenes válidas. Máximo ${MAX_PRODUCT_IMAGES} por producto.`);
+      setErrMsg(`Arrastra imÃ¡genes vÃ¡lidas. MÃ¡ximo ${MAX_PRODUCT_IMAGES} por producto.`);
       return;
     }
 
     for (const file of accepted) {
-      // Subida secuencial para mantener el orden de las imágenes.
+      // Subida secuencial para mantener el orden de las imÃ¡genes.
       // eslint-disable-next-line no-await-in-loop
       await subirImagenProducto(file, target);
     }
@@ -1063,7 +1136,7 @@ export function Admin() {
       });
       
       const msg = estado === "entregado" 
-        ? "¡Canje marcado como entregado!" 
+        ? "Â¡Canje marcado como entregado!" 
         : "Canje anulado correctamente. Los puntos han sido devueltos al cliente.";
       setOkMsg(msg);
       
@@ -1073,6 +1146,46 @@ export function Admin() {
     } finally {
       setBusy(false);
       setConfirmacion(null);
+    }
+  }
+
+  async function buscarCanjeCodigoAdmin() {
+    const codigo = codigoCanjeAdmin.trim().toUpperCase();
+    if (!codigo) return;
+    setCanjeCodigoAdminErr("");
+    setCanjeCodigoAdminOk("");
+    setCanjeCodigoAdmin(null);
+    setBuscandoCanjeAdmin(true);
+    try {
+      const data = await api.get<CanjeCodigoAdmin>(`/vendedor/canje/${codigo}`);
+      setCanjeCodigoAdmin(data);
+    } catch (error) {
+      setCanjeCodigoAdminErr((error as Error).message);
+    } finally {
+      setBuscandoCanjeAdmin(false);
+    }
+  }
+
+  async function procesarCanjeCodigoAdmin(estado: "entregado" | "no_disponible" | "cancelado") {
+    if (!canjeCodigoAdmin) return;
+    setCanjeCodigoAdminErr("");
+    setCanjeCodigoAdminOk("");
+    setProcesandoCanjeAdmin(true);
+    try {
+      await api.patch(`/vendedor/canje/${canjeCodigoAdmin.codigo_retiro}`, { estado });
+      setCanjeCodigoAdmin((prev) => (prev ? { ...prev, estado } : prev));
+      setCanjeCodigoAdminOk(
+        estado === "entregado"
+          ? "Canje marcado como entregado."
+          : estado === "no_disponible"
+          ? "Canje marcado como no disponible. Puntos devueltos al cliente."
+          : "Canje cancelado. Puntos devueltos al cliente."
+      );
+      await refreshQueries([["admin", "canjes"], ["admin", "stats"]]);
+    } catch (error) {
+      setCanjeCodigoAdminErr((error as Error).message);
+    } finally {
+      setProcesandoCanjeAdmin(false);
     }
   }
 
@@ -1376,6 +1489,13 @@ export function Admin() {
   }
 
   const stats = statsQuery.data;
+  const canjeCodigoAdminFinalizado = canjeCodigoAdmin
+    ? ["entregado", "cancelado", "expirado"].includes(canjeCodigoAdmin.estado)
+    : false;
+  
+  useEffect(() => {
+    setMobileAdminNavOpen(false);
+  }, [tab]);
 
   return (
     <section className="admin-layout">
@@ -1383,9 +1503,18 @@ export function Admin() {
         <div className="admin-brand">
           <p className="admin-brand-name">Administrador</p>
           <p className="admin-brand-role">Panel</p>
+          <button
+            type="button"
+            className="admin-mobile-nav-toggle"
+            onClick={() => setMobileAdminNavOpen((prev) => !prev)}
+            aria-expanded={mobileAdminNavOpen}
+            aria-controls="admin-nav-main"
+          >
+            {mobileAdminNavOpen ? "Cerrar menu" : "Menu"}
+          </button>
         </div>
 
-        <nav className="admin-nav">
+        <nav id="admin-nav-main" className={`admin-nav ${mobileAdminNavOpen ? "admin-nav-open" : ""}`}>
           <span className="admin-nav-section">General</span>
           <button className={`admin-nav-btn ${tab === "inicio" ? "active" : ""}`} onClick={() => setTab("inicio")}>
             Inicio
@@ -1463,53 +1592,77 @@ export function Admin() {
             <>
               <div className="admin-section-header">
                 <h2 className="admin-section-title">Ultimos movimientos</h2>
-                <button className="adm-btn-link" onClick={() => setTab("transacciones")}>
-                  Ver todos
-                </button>
+                <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
+                  <button className="adm-btn-link" onClick={() => setInicioMovimientosOpen((prev) => !prev)}>
+                    {inicioMovimientosOpen ? "Ocultar" : "Mostrar"}
+                  </button>
+                  <button className="adm-btn-link" onClick={() => setTab("transacciones")}>
+                    Ver todos
+                  </button>
+                </div>
               </div>
 
-              <div className="admin-card">
-                <div className="admin-table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Usuario</th>
-                        <th>Tipo</th>
-                        <th>Puntos</th>
-                        <th>Descripcion</th>
-                        <th>Fecha</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {movimientosInicioPagina.length === 0 ? (
+              {inicioMovimientosOpen ? (
+                <div className="admin-card">
+                  <div className="adm-mobile-list">
+                    {movimientosInicioPagina.length === 0 ? (
+                      <div className="adm-empty">No hay movimientos para mostrar.</div>
+                    ) : (
+                      movimientosInicioPagina.map((movimiento) => (
+                        <div key={movimiento.id} className="adm-mobile-item">
+                          <p className="adm-mobile-item-title">{movimiento.usuario_nombre}</p>
+                          <p><strong>Tipo:</strong> {formatMovimientoTipo(movimiento.tipo)}</p>
+                          <p className={movimiento.puntos >= 0 ? "adm-pts-pos" : "adm-pts-neg"}>
+                            <strong>Puntos:</strong> {movimiento.puntos >= 0 ? "+" : ""}{movimiento.puntos}
+                          </p>
+                          <p><strong>Descripcion:</strong> {movimiento.descripcion || "-"}</p>
+                          <p><strong>Fecha:</strong> {formatDate(movimiento.created_at)}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="admin-table-wrap adm-desktop-table">
+                    <table className="admin-table">
+                      <thead>
                         <tr>
-                          <td colSpan={5}>
-                            <div className="adm-empty">No hay movimientos para mostrar.</div>
-                          </td>
+                          <th>Usuario</th>
+                          <th>Tipo</th>
+                          <th>Puntos</th>
+                          <th>Descripcion</th>
+                          <th>Fecha</th>
                         </tr>
-                      ) : null}
-                      {movimientosInicioPagina.map((movimiento) => (
-                        <tr key={movimiento.id}>
-                          <td>{movimiento.usuario_nombre}</td>
-                          <td>{formatMovimientoTipo(movimiento.tipo)}</td>
-                          <td className={movimiento.puntos >= 0 ? "adm-pts-pos" : "adm-pts-neg"}>
-                            {movimiento.puntos >= 0 ? "+" : ""}
-                            {movimiento.puntos}
-                          </td>
-                          <td>{movimiento.descripcion || "-"}</td>
-                          <td>{formatDate(movimiento.created_at)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {movimientosInicioPagina.length === 0 ? (
+                          <tr>
+                            <td colSpan={5}>
+                              <div className="adm-empty">No hay movimientos para mostrar.</div>
+                            </td>
+                          </tr>
+                        ) : null}
+                        {movimientosInicioPagina.map((movimiento) => (
+                          <tr key={movimiento.id}>
+                            <td>{movimiento.usuario_nombre}</td>
+                            <td>{formatMovimientoTipo(movimiento.tipo)}</td>
+                            <td className={movimiento.puntos >= 0 ? "adm-pts-pos" : "adm-pts-neg"}>
+                              {movimiento.puntos >= 0 ? "+" : ""}
+                              {movimiento.puntos}
+                            </td>
+                            <td>{movimiento.descripcion || "-"}</td>
+                            <td>{formatDate(movimiento.created_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <PaginationControls
+                    page={movimientosInicioPage}
+                    totalPages={totalMovimientosInicioPages}
+                    onPrev={() => setMovimientosInicioPage((prev) => Math.max(1, prev - 1))}
+                    onNext={() => setMovimientosInicioPage((prev) => Math.min(totalMovimientosInicioPages, prev + 1))}
+                  />
                 </div>
-                <PaginationControls
-                  page={movimientosInicioPage}
-                  totalPages={totalMovimientosInicioPages}
-                  onPrev={() => setMovimientosInicioPage((prev) => Math.max(1, prev - 1))}
-                  onNext={() => setMovimientosInicioPage((prev) => Math.min(totalMovimientosInicioPages, prev + 1))}
-                />
-              </div>
+              ) : null}
 
               <div className="admin-section-header adm-config-header">
                 <h2 className="admin-section-title">Configuracion del programa</h2>
@@ -1520,10 +1673,7 @@ export function Admin() {
                 </p>
                 <div className="adm-config-grid">
                   <div className="adm-field">
-                    <FieldLabel
-                      text="Dias limite de retiro"
-                      tip="Cantidad de dias que tiene el cliente para retirar un canje antes de que expire."
-                    />
+                    <label className="adm-label">Dias limite de retiro</label>
                     <input
                       type="number"
                       min={1}
@@ -1533,12 +1683,10 @@ export function Admin() {
                       onChange={(event) => setConfigDraft((prev) => ({ ...prev, dias_limite_retiro: event.target.value }))}
                       placeholder="Ej: 7"
                     />
+                    <p className="adm-field-help">Cantidad de dias que tiene el cliente para retirar un canje antes de que expire.</p>
                   </div>
                   <div className="adm-field">
-                    <FieldLabel
-                      text="Puntos para quien invita"
-                      tip="Puntos que recibe el usuario que comparte su codigo cuando otra persona se registra."
-                    />
+                    <label className="adm-label">Puntos para quien invita</label>
                     <input
                       type="number"
                       min={0}
@@ -1548,12 +1696,10 @@ export function Admin() {
                       onChange={(event) => setConfigDraft((prev) => ({ ...prev, puntos_referido_invitador: event.target.value }))}
                       placeholder="Ej: 50"
                     />
+                    <p className="adm-field-help">Puntos que recibe quien comparte su codigo cuando otra persona se registra.</p>
                   </div>
                   <div className="adm-field">
-                    <FieldLabel
-                      text="Puntos para quien se registra"
-                      tip="Puntos que recibe el nuevo cliente al usar un codigo de invitacion valido."
-                    />
+                    <label className="adm-label">Puntos para quien se registra</label>
                     <input
                       type="number"
                       min={0}
@@ -1563,6 +1709,7 @@ export function Admin() {
                       onChange={(event) => setConfigDraft((prev) => ({ ...prev, puntos_referido_invitado: event.target.value }))}
                       placeholder="Ej: 30"
                     />
+                    <p className="adm-field-help">Puntos que recibe el nuevo cliente al usar un codigo de invitacion valido.</p>
                   </div>
                 </div>
                 {configErr ? <div className="adm-msg-err">{configErr}</div> : null}
@@ -1589,6 +1736,114 @@ export function Admin() {
                   </button>
                 </div>
               </div>
+
+              <div className="admin-section-header adm-config-header">
+                <h2 className="admin-section-title">Intentos de acceso bloqueados</h2>
+                <button className="adm-btn-link" onClick={() => setInicioSeguridadOpen((prev) => !prev)}>
+                  {inicioSeguridadOpen ? "Ocultar" : "Mostrar"}
+                </button>
+              </div>
+              {inicioSeguridadOpen ? (
+                <div className="admin-card">
+                  <div className="adm-mobile-list">
+                    {securityMonitorQuery.isLoading ? (
+                      <div className="adm-empty">Cargando eventos de seguridad...</div>
+                    ) : null}
+                    {!securityMonitorQuery.isLoading && blockedAccessEvents.length === 0 ? (
+                      <div className="adm-empty">No hay intentos bloqueados recientes.</div>
+                    ) : null}
+                    {blockedAccessEvents.map((event) => {
+                      const detalles = event.detalles ?? {};
+                      const usuarioNombre = typeof detalles.usuario_nombre === "string" ? detalles.usuario_nombre : null;
+                      const usuarioEmail = typeof detalles.usuario_email === "string" ? detalles.usuario_email : null;
+                      const usuarioRol = typeof detalles.usuario_rol === "string" ? detalles.usuario_rol : null;
+                      const autenticado = Boolean(detalles.autenticado);
+                      const attemptedPath =
+                        typeof detalles.attempted_path === "string" ? detalles.attempted_path : event.ruta;
+                      const requiredRoles = Array.isArray(detalles.required_roles)
+                        ? detalles.required_roles.filter((value): value is string => typeof value === "string")
+                        : [];
+
+                      return (
+                        <div key={event.id} className="adm-mobile-item">
+                          <p className="adm-mobile-item-title">{formatDate(event.creado_en)}</p>
+                          <p><strong>IP:</strong> {event.ip}</p>
+                          <p>
+                            <strong>Usuario:</strong>{" "}
+                            {autenticado
+                              ? `${usuarioNombre ?? "Usuario autenticado"}${usuarioEmail ? ` - ${usuarioEmail}` : ""}${usuarioRol ? ` (${usuarioRol})` : ""}`
+                              : "No logueado/registrado"}
+                          </p>
+                          <p><strong>Intento:</strong> {attemptedPath}</p>
+                          <p><strong>Permisos:</strong> {requiredRoles.length ? requiredRoles.join(", ") : "-"}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="admin-table-wrap adm-desktop-table">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>IP</th>
+                          <th>Usuario</th>
+                          <th>Intento</th>
+                          <th>Permisos requeridos</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {securityMonitorQuery.isLoading ? (
+                          <tr>
+                            <td colSpan={5}>
+                              <div className="adm-empty">Cargando eventos de seguridad...</div>
+                            </td>
+                          </tr>
+                        ) : null}
+                        {!securityMonitorQuery.isLoading && blockedAccessEvents.length === 0 ? (
+                          <tr>
+                            <td colSpan={5}>
+                              <div className="adm-empty">No hay intentos bloqueados recientes.</div>
+                            </td>
+                          </tr>
+                        ) : null}
+                        {blockedAccessEvents.map((event) => {
+                          const detalles = event.detalles ?? {};
+                          const usuarioNombre = typeof detalles.usuario_nombre === "string" ? detalles.usuario_nombre : null;
+                          const usuarioEmail = typeof detalles.usuario_email === "string" ? detalles.usuario_email : null;
+                          const usuarioRol = typeof detalles.usuario_rol === "string" ? detalles.usuario_rol : null;
+                          const autenticado = Boolean(detalles.autenticado);
+                          const attemptedPath =
+                            typeof detalles.attempted_path === "string" ? detalles.attempted_path : event.ruta;
+                          const requiredRoles = Array.isArray(detalles.required_roles)
+                            ? detalles.required_roles.filter((value): value is string => typeof value === "string")
+                            : [];
+
+                          return (
+                            <tr key={event.id}>
+                              <td>{formatDate(event.creado_en)}</td>
+                              <td>{event.ip}</td>
+                              <td>
+                                {autenticado ? (
+                                  <div style={{ display: "grid", gap: "0.15rem" }}>
+                                    <strong>{usuarioNombre ?? "Usuario autenticado"}</strong>
+                                    <span style={{ color: "#8B5A30", fontSize: "0.75rem" }}>
+                                      {usuarioEmail ?? "-"}{usuarioRol ? ` (${usuarioRol})` : ""}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span>No logueado/registrado</span>
+                                )}
+                              </td>
+                              <td>{attemptedPath}</td>
+                              <td>{requiredRoles.length ? requiredRoles.join(", ") : "-"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="admin-section-header adm-config-header">
                 <h2 className="admin-section-title">Tabla de sucursales de retiro</h2>
@@ -1850,7 +2105,7 @@ export function Admin() {
                                     </select>
                                     <input
                                       className="adm-input"
-                                      placeholder="Teléfono (opcional)"
+                                      placeholder="TelÃ©fono (opcional)"
                                       value={editUsuarioDraft.telefono}
                                       onChange={(event) => setEditUsuarioDraft((prev) => ({ ...prev, telefono: event.target.value }))}
                                     />
@@ -1966,7 +2221,7 @@ export function Admin() {
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => void manejarDropImagenesProducto(event, "nuevo")}
                 >
-                  <p className="adm-upload-drop-title">Arrastra fotos aquí (hasta 3)</p>
+                  <p className="adm-upload-drop-title">Arrastra fotos aquÃ­ (hasta 3)</p>
                   <p className="adm-upload-drop-sub">O selecciona desde tu dispositivo</p>
                   <label className="adm-btn-secondary adm-btn-inline" style={{ cursor: "pointer", width: "auto" }}>
                     Cargar imagen
@@ -1983,7 +2238,7 @@ export function Admin() {
                   </label>
                 </div>
 
-                <div className="adm-inline-tip">Puedes cargar hasta 3 imágenes. La primera se usa como portada del catálogo.</div>
+                <div className="adm-inline-tip">Puedes cargar hasta 3 imÃ¡genes. La primera se usa como portada del catÃ¡logo.</div>
                 {nuevoProducto.imagenes.length ? (
                   <div className="adm-product-images-grid">
                     {nuevoProducto.imagenes.map((url, index) => (
@@ -2098,8 +2353,8 @@ export function Admin() {
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => void manejarDropImagenesProducto(event, "edit")}
                         >
-                          <p className="adm-upload-drop-title">Arrastra fotos aquí (hasta 3)</p>
-                          <p className="adm-upload-drop-sub">También puedes reemplazar o agregar imágenes manualmente</p>
+                          <p className="adm-upload-drop-title">Arrastra fotos aquÃ­ (hasta 3)</p>
+                          <p className="adm-upload-drop-sub">TambiÃ©n puedes reemplazar o agregar imÃ¡genes manualmente</p>
                           <label className="adm-btn-secondary adm-btn-inline" style={{ cursor: "pointer", width: "auto" }}>
                             Agregar imagen
                             <input
@@ -2115,7 +2370,7 @@ export function Admin() {
                           </label>
                         </div>
 
-                        <div className="adm-inline-tip">Ordena tus imágenes quitando y volviendo a cargar. La primera se muestra como portada.</div>
+                        <div className="adm-inline-tip">Ordena tus imÃ¡genes quitando y volviendo a cargar. La primera se muestra como portada.</div>
                         {editDraft.imagenes.length ? (
                           <div className="adm-product-images-grid">
                             {editDraft.imagenes.map((url, index) => (
@@ -2148,7 +2403,7 @@ export function Admin() {
                           <p className="admin-producto-sub">
                             {producto.categoria || "Sin categoria"} - {producto.puntos_requeridos} pts
                           </p>
-                          <p className="admin-producto-sub">Imágenes: {producto.imagenes?.length ?? (producto.imagen_url ? 1 : 0)} / {MAX_PRODUCT_IMAGES}</p>
+                          <p className="admin-producto-sub">ImÃ¡genes: {producto.imagenes?.length ?? (producto.imagen_url ? 1 : 0)} / {MAX_PRODUCT_IMAGES}</p>
                         </div>
                         <div className="admin-producto-actions">
                           <button className="adm-btn-link" onClick={() => startEdit(producto)}>
@@ -2272,6 +2527,114 @@ export function Admin() {
           {tab === "canjes" ? (
             <>
               <SectionTitle title="Gestion de canjes" />
+              <div className="admin-card admin-card-padded" style={{ display: "grid", gap: "0.8rem", marginBottom: "1rem" }}>
+                <p style={{ margin: 0, fontSize: "0.8rem", color: "#7A5A3C" }}>
+                  Reclama canjes por codigo sin salir del panel admin.
+                </p>
+                <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                  <input
+                    className="adm-input"
+                    placeholder="Ingresa codigo de canje"
+                    value={codigoCanjeAdmin}
+                    onChange={(event) => {
+                      setCodigoCanjeAdmin(event.target.value.toUpperCase());
+                      setCanjeCodigoAdmin(null);
+                      setCanjeCodigoAdminErr("");
+                      setCanjeCodigoAdminOk("");
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void buscarCanjeCodigoAdmin();
+                      }
+                    }}
+                    maxLength={9}
+                    style={{ textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, flex: "1 1 280px" }}
+                  />
+                  <button
+                    className="adm-btn-primary adm-btn-inline"
+                    onClick={() => void buscarCanjeCodigoAdmin()}
+                    disabled={buscandoCanjeAdmin || codigoCanjeAdmin.trim().length < 3}
+                  >
+                    {buscandoCanjeAdmin ? "Buscando..." : "Buscar"}
+                  </button>
+                </div>
+
+                {canjeCodigoAdminErr ? <div className="adm-msg-err">{canjeCodigoAdminErr}</div> : null}
+                {canjeCodigoAdminOk ? <div className="adm-msg-ok">{canjeCodigoAdminOk}</div> : null}
+
+                {canjeCodigoAdmin ? (
+                  <div style={{ background: "#FFF8F0", border: "1px solid rgba(180,84,20,0.24)", borderRadius: "12px", padding: "0.85rem" }}>
+                    <p style={{ margin: "0 0 0.45rem", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8B5A30" }}>
+                      Detalle del canje
+                    </p>
+                    <div style={{ display: "grid", gap: "0.25rem" }}>
+                      <p style={{ margin: 0, fontSize: "0.9rem" }}><strong>Producto principal:</strong> {canjeCodigoAdmin.producto_nombre}</p>
+                      {canjeCodigoAdmin.items?.length ? (
+                        <div style={{ color: "#8B5A30", fontSize: "0.78rem" }}>
+                          <p style={{ margin: "0 0 0.18rem", fontWeight: 700 }}>
+                            Productos ({canjeCodigoAdmin.total_unidades ?? canjeCodigoAdmin.items.reduce((acc, item) => acc + item.cantidad, 0)} unidades):
+                          </p>
+                          {canjeCodigoAdmin.items.map((item) => (
+                            <p key={`${item.producto_id}-${item.cantidad}`} style={{ margin: "0.1rem 0" }}>
+                              â€¢ {item.producto_nombre} x{item.cantidad}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                      <p style={{ margin: 0, fontSize: "0.9rem" }}><strong>Cliente:</strong> {canjeCodigoAdmin.cliente_nombre} â€” DNI {canjeCodigoAdmin.cliente_dni}</p>
+                      <p style={{ margin: 0, fontSize: "0.9rem" }}><strong>Puntos:</strong> {canjeCodigoAdmin.puntos_usados} pts</p>
+                      {canjeCodigoAdmin.sucursal_nombre ? (
+                        <p style={{ margin: 0, fontSize: "0.9rem" }}>
+                          <strong>Sucursal:</strong> {canjeCodigoAdmin.sucursal_nombre} - {canjeCodigoAdmin.sucursal_direccion}
+                          {canjeCodigoAdmin.sucursal_piso ? `, Piso ${canjeCodigoAdmin.sucursal_piso}` : ""}
+                          {canjeCodigoAdmin.sucursal_localidad ? `, ${canjeCodigoAdmin.sucursal_localidad}` : ""}
+                          {canjeCodigoAdmin.sucursal_provincia ? `, ${canjeCodigoAdmin.sucursal_provincia}` : ""}
+                        </p>
+                      ) : null}
+                      <p style={{ margin: 0, fontSize: "0.9rem" }}>
+                        <strong>Estado:</strong>{" "}
+                        <span style={{ color: canjeCodigoAdmin.estado === "pendiente" ? "#D4621A" : canjeCodigoAdmin.estado === "entregado" ? "#16a34a" : "#dc2626", fontWeight: 700 }}>
+                          {canjeCodigoAdmin.estado.toUpperCase()}
+                        </span>
+                      </p>
+                    </div>
+
+                    {!canjeCodigoAdminFinalizado ? (
+                      <div style={{ display: "flex", gap: "0.45rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+                        <button
+                          className="adm-btn-primary adm-btn-inline"
+                          style={{ background: "#16a34a", minWidth: "130px" }}
+                          disabled={procesandoCanjeAdmin}
+                          onClick={() => void procesarCanjeCodigoAdmin("entregado")}
+                        >
+                          Entregado
+                        </button>
+                        <button
+                          className="adm-btn-secondary"
+                          style={{ flex: "0 0 auto", minWidth: "130px" }}
+                          disabled={procesandoCanjeAdmin}
+                          onClick={() => void procesarCanjeCodigoAdmin("no_disponible")}
+                        >
+                          No disponible
+                        </button>
+                        <button
+                          className="adm-btn-secondary"
+                          style={{ flex: "0 0 auto", minWidth: "130px", color: "#dc2626", borderColor: "#dc2626" }}
+                          disabled={procesandoCanjeAdmin}
+                          onClick={() => void procesarCanjeCodigoAdmin("cancelado")}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <p style={{ margin: "0.8rem 0 0", fontSize: "0.82rem", color: "#7A5A3C", fontWeight: 600 }}>
+                        Este canje ya no puede modificarse.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
               <div className="admin-card">
                 <div className="admin-table-wrap">
                   <table className="admin-table">
@@ -2305,7 +2668,7 @@ export function Admin() {
                           <td>
                             <div style={{ display: "grid", gap: "0.2rem" }}>
                               <span>{canje.producto_nombre}</span>
-                              {canje.total_items && canje.total_items > 1 ? (
+                              {((canje.total_items ?? 0) > 1 || (canje.total_unidades ?? 0) > 1) ? (
                                 <span style={{ color: "#8B5A30", fontSize: "0.75rem" }}>
                                   {canje.productos_detalle}
                                 </span>
@@ -2364,38 +2727,50 @@ export function Admin() {
           {tab === "codigos" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               <SectionTitle title="Nuevo codigo promocional" />
-              <div className="adm-inline-help">
-                <button
-                  type="button"
-                  className="adm-btn-link"
-                  onClick={() =>
-                    setAdminHint(
-                      "Código: nombre único (ej: BIENVENIDA2026). Puntos: valor que suma el código. Usos máximos: 0 = ilimitado, 1 o más para límite. Expiración: opcional, si no cargas fecha queda sin vencimiento."
-                    )
-                  }
-                >
-                  ¿Qué pongo en cada campo?
-                </button>
+              <div className="admin-card admin-card-padded adm-code-guide">
+                <p className="adm-code-guide-title">Guia para crear codigos</p>
+                <div className="adm-code-guide-grid">
+                  <div>
+                    <p className="adm-code-guide-label">Codigo promocional</p>
+                    <p className="adm-code-guide-text">Nombre unico en mayusculas y sin espacios. Ejemplo: BIENVENIDA2026.</p>
+                  </div>
+                  <div>
+                    <p className="adm-code-guide-label">Puntos que entrega</p>
+                    <p className="adm-code-guide-text">Cantidad de puntos que suma cada canje del codigo.</p>
+                  </div>
+                  <div>
+                    <p className="adm-code-guide-label">Usos maximos</p>
+                    <p className="adm-code-guide-text">0 significa usos ilimitados. Si pones 1 o mas, se limita a ese total.</p>
+                  </div>
+                  <div>
+                    <p className="adm-code-guide-label">Fecha de expiracion</p>
+                    <p className="adm-code-guide-text">Opcional. Si la dejas vacia, el codigo no vence por fecha.</p>
+                  </div>
+                </div>
               </div>
               <div className="admin-card admin-card-padded" style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
                 <div className="adm-form-grid">
                   <div className="adm-field">
-                    <FieldLabel text="Código promocional" tip="Nombre único del código. Usa letras y números, sin espacios." />
+                    <label className="adm-label">Codigo promocional</label>
                     <input className="adm-input" placeholder="Ej: BIENVENIDA2026" value={nuevoCodigo.codigo} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, codigo: event.target.value.toUpperCase() }))} />
+                    <p className="adm-field-help">Solo letras y numeros, sin espacios.</p>
                   </div>
                   <div className="adm-field">
-                    <FieldLabel text="Puntos que entrega" tip="Cantidad de puntos que suma al canjear el código." />
+                    <label className="adm-label">Puntos que entrega</label>
                     <input type="number" min={1} className="adm-input" placeholder="Ej: 500" value={nuevoCodigo.puntos_valor ?? ""} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, puntos_valor: event.target.value ? Number(event.target.value) : null }))} />
+                    <p className="adm-field-help">Valor de puntos que recibe el cliente al canjear.</p>
                   </div>
                 </div>
                 <div className="adm-form-grid">
                   <div className="adm-field">
-                    <FieldLabel text="Usos máximos" tip="0 significa ilimitado. Si pones 1, solo se puede usar una vez en total." />
+                    <label className="adm-label">Usos maximos</label>
                     <input type="number" min={0} className="adm-input" placeholder="Ej: 1" value={nuevoCodigo.usos_maximos ?? ""} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, usos_maximos: event.target.value ? Number(event.target.value) : null }))} />
+                    <p className="adm-field-help">0 = ilimitado. 1 o mas = limite total de usos.</p>
                   </div>
                   <div className="adm-field">
-                    <FieldLabel text="Fecha de expiración" tip="Opcional. Si lo dejas vacío, el código no vence por fecha." />
+                    <label className="adm-label">Fecha de expiracion</label>
                     <input type="datetime-local" className="adm-input" value={nuevoCodigo.fecha_expiracion} onChange={(event) => setNuevoCodigo((prev) => ({ ...prev, fecha_expiracion: event.target.value }))} />
+                    <p className="adm-field-help">Opcional. Si no completas, el codigo queda sin vencimiento.</p>
                   </div>
                 </div>
                 <button className="adm-btn-primary" disabled={busy} onClick={crearCodigo}>
@@ -2492,7 +2867,7 @@ export function Admin() {
                     </div>
                     <div className="adm-notepad-body">
                       <p className="adm-md-hint">
-                        Guía rápida Markdown: <code>#</code> título grande, <code>##</code> subtítulo, <code>-</code> listas,
+                        GuÃ­a rÃ¡pida Markdown: <code>#</code> tÃ­tulo grande, <code>##</code> subtÃ­tulo, <code>-</code> listas,
                         <code> **texto** </code> negrita y <code>[texto](https://url)</code> para enlaces.
                       </p>
                       <input className="adm-notepad-title-input" value={sobreDraft.titulo} onChange={(event) => setSobreDraft((prev) => ({ ...prev, titulo: event.target.value }))} placeholder="Titulo" />
@@ -2566,7 +2941,7 @@ export function Admin() {
                     </div>
                     <div className="adm-notepad-body">
                       <p className="adm-md-hint">
-                        Guía rápida Markdown: <code>#</code> título grande, <code>##</code> subtítulo, <code>-</code> listas,
+                        GuÃ­a rÃ¡pida Markdown: <code>#</code> tÃ­tulo grande, <code>##</code> subtÃ­tulo, <code>-</code> listas,
                         <code> **texto** </code> negrita y <code>[texto](https://url)</code> para enlaces.
                       </p>
                       <input className="adm-notepad-title-input" value={terminosDraft.titulo} onChange={(event) => setTerminosDraft((prev) => ({ ...prev, titulo: event.target.value }))} placeholder="Titulo" />
@@ -2630,20 +3005,20 @@ export function Admin() {
         </div>
       </main>
 
-      {/* ── MODAL DE CONFIRMACIÓN ── */}
+      {/* â”€â”€ MODAL DE CONFIRMACIÃ“N â”€â”€ */}
       {confirmacion && (
         <div className="adm-modal-overlay">
           <div className="adm-modal">
             <div className={`adm-modal-icon ${confirmacion.estado === 'entregado' ? 'success' : 'warning'}`}>
-              {confirmacion.estado === 'entregado' ? '✅' : '⚠️'}
+              {confirmacion.estado === 'entregado' ? 'âœ…' : 'âš ï¸'}
             </div>
             <h3 className="adm-modal-title">
-              {confirmacion.estado === 'entregado' ? '¿Confirmar entrega?' : '¿Anular este canje?'}
+              {confirmacion.estado === 'entregado' ? 'Â¿Confirmar entrega?' : 'Â¿Anular este canje?'}
             </h3>
             <p className="adm-modal-desc">
               {confirmacion.estado === 'entregado' 
-                ? `Estás por marcar como ENTREGADO el canje de "${confirmacion.producto}" para ${confirmacion.cliente}.`
-                : `Se anulará el canje de "${confirmacion.producto}" para ${confirmacion.cliente}. Los puntos se devolverán automáticamente al saldo del usuario.`
+                ? `EstÃ¡s por marcar como ENTREGADO el canje de "${confirmacion.producto}" para ${confirmacion.cliente}.`
+                : `Se anularÃ¡ el canje de "${confirmacion.producto}" para ${confirmacion.cliente}. Los puntos se devolverÃ¡n automÃ¡ticamente al saldo del usuario.`
               }
             </p>
             <div className="adm-modal-actions">
@@ -2656,7 +3031,7 @@ export function Admin() {
                 onClick={() => actualizarEstadoCanje(confirmacion.id, confirmacion.estado)}
                 disabled={busy}
               >
-                {busy ? 'Procesando...' : confirmacion.estado === 'entregado' ? 'Confirmar entrega' : 'Confirmar anulación'}
+                {busy ? 'Procesando...' : confirmacion.estado === 'entregado' ? 'Confirmar entrega' : 'Confirmar anulaciÃ³n'}
               </button>
             </div>
           </div>
@@ -2665,3 +3040,4 @@ export function Admin() {
     </section>
   );
 }
+

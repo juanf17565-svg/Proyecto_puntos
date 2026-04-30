@@ -21,7 +21,8 @@ export default function App() {
       <div className="app-main">
         <main>
           <Routes>
-            <Route path="/" element={<Catalogo />} />
+            <Route path="/" element={<Navigate to="/catalogo" replace />} />
+            <Route path="/catalogo" element={<Catalogo />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
             <Route
@@ -66,7 +67,7 @@ export default function App() {
             />
             <Route path="/sobre-nosotros" element={<SobreNosotros />} />
             <Route path="/terminos" element={<Terminos />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/catalogo" replace />} />
           </Routes>
         </main>
         <Footer />
